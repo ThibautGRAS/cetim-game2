@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CETIM Game</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- Écran de sélection de personnage -->
+        <div id="character-selection" class="screen active">
+            <h1>Sélectionnez votre personnage</h1>
+            <div class="characters-grid">
+                <div class="character-card" id="Junior" data-character="Junior">
+                    <h2>Junior</h2>
+                    <div class="stats">
+                        <div class="stat">
+                            <span>Vitesse</span>
+                            <div class="bar"><div class="fill" style="width: 80%"></div></div>
+                        </div>
+                        <div class="stat">
+                            <span>Frais Généraux</span>
+                            <div class="bar"><div class="fill" style="width: 20%"></div></div>
+                        </div>
+                        <div class="stat">
+                            <span>Efficacité</span>
+                            <div class="bar"><div class="fill" style="width: 50%"></div></div>
+                        </div>
+                        <div class="stat">
+                            <span>Maladresse</span>
+                            <div class="bar"><div class="fill" style="width: 60%"></div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="character-card" id="Specialiste" data-character="Specialiste">
+                    <h2>Spécialiste</h2>
+                    <div class="stats">
+                        <div class="stat">
+                            <span>Vitesse</span>
+                            <div class="bar"><div class="fill" style="width: 50%"></div></div>
+                        </div>
+                        <div class="stat">
+                            <span>Frais Généraux</span>
+                            <div class="bar"><div class="fill" style="width: 40%"></div></div>
+                        </div>
+                        <div class="stat">
+                            <span>Efficacité</span>
+                            <div class="bar"><div class="fill" style="width: 60%"></div></div>
+                        </div>
+                        <div class="stat">
+                            <span>Maladresse</span>
+                            <div class="bar"><div class="fill" style="width: 40%"></div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="character-card" id="Referent" data-character="Referent">
+                    <h2>Référent</h2>
+                    <div class="stats">
+                        <div class="stat">
+                            <span>Vitesse</span>
+                            <div class="bar"><div class="fill" style="width: 40%"></div></div>
+                        </div>
+                        <div class="stat">
+                            <span>Frais Généraux</span>
+                            <div class="bar"><div class="fill" style="width: 40%"></div></div>
+                        </div>
+                        <div class="stat">
+                            <span>Efficacité</span>
+                            <div class="bar"><div class="fill" style="width: 70%"></div></div>
+                        </div>
+                        <div class="stat">
+                            <span>Maladresse</span>
+                            <div class="bar"><div class="fill" style="width: 50%"></div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="character-card" id="Expert" data-character="Expert">
+                    <h2>Expert</h2>
+                    <div class="stats">
+                        <div class="stat">
+                            <span>Vitesse</span>
+                            <div class="bar"><div class="fill" style="width: 35%"></div></div>
+                        </div>
+                        <div class="stat">
+                            <span>Frais Généraux</span>
+                            <div class="bar"><div class="fill" style="width: 50%"></div></div>
+                        </div>
+                        <div class="stat">
+                            <span>Efficacité</span>
+                            <div class="bar"><div class="fill" style="width: 70%"></div></div>
+                        </div>
+                        <div class="stat">
+                            <span>Maladresse</span>
+                            <div class="bar"><div class="fill" style="width: 20%"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Écran de jeu -->
+        <div id="game-screen" class="screen">
+            <canvas id="game-canvas"></canvas>
+        </div>
+
+        <!-- Écran de fin -->
+        <div id="end-screen" class="screen">
+            <h1>Récapitulatif</h1>
+            <div id="level-scores">
+                <div class="level-score">
+                    <h3>Niveau 1</h3>
+                    <p>Score: <span id="level1-score">0</span></p>
+                </div>
+                <div class="level-score">
+                    <h3>Niveau 2</h3>
+                    <p>Score: <span id="level2-score">0</span></p>
+                </div>
+                <div class="level-score">
+                    <h3>Niveau 3</h3>
+                    <p>Score: <span id="level3-score">0</span></p>
+                </div>
+            </div>
+            <button id="restart-button">Recommencer</button>
+        </div>
+    </div>
+
+    <!-- Chargement des scripts dans le bon ordre -->
+    <script src="js/keys.js"></script>
+    <script src="js/characters.js"></script>
+    <script src="js/levels.js"></script>
+    <script src="js/game.js"></script>
+    <script>
+        // Attendre que tous les scripts soient chargés
+        window.addEventListener('load', () => {
+            console.log('Page fully loaded, initializing game');
+            
+            // Vérifier que tous les éléments nécessaires sont présents
+            const canvas = document.getElementById('game-canvas');
+            const characterSelection = document.getElementById('character-selection');
+            const gameScreen = document.getElementById('game-screen');
+            const endScreen = document.getElementById('end-screen');
+            
+            if (!canvas || !characterSelection || !gameScreen || !endScreen) {
+                console.error('Required elements not found!');
+                return;
+            }
+            
+            // Définir la taille du canvas
+            canvas.width = 800;
+            canvas.height = 600;
+            
+            try {
+                // Créer l'instance de Game
+                window.game = new Game();
+                console.log('Game instance created successfully');
+            } catch (error) {
+                console.error('Error creating game instance:', error);
+            }
+        });
+    </script>
+</body>
+</html>
