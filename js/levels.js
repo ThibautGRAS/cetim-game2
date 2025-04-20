@@ -571,6 +571,7 @@ class Level2 extends Level {
         this.reviewsCollected = 0;
         this.projectHours = 0;
         this.overhead = 0; // frais généraux
+        this.bgAudio = null; // fond sonore
     }
     getPlayerAnimFolder() {
         const name = this.character.name.toLowerCase();
@@ -615,7 +616,23 @@ class Level2 extends Level {
         this.playerAnimChecked = false;
         this.playerHasAnim = false;
         this.checkPlayerAnimImages();
+        // --- Ajout du fond sonore ---
+        if (!this.bgAudio) {
+            this.bgAudio = new Audio('images/L2/sound.wav');
+            this.bgAudio.loop = true;
+            this.bgAudio.volume = 0.5;
+        }
+        this.bgAudio.currentTime = 0;
+        this.bgAudio.play().catch(() => {});
         console.log('Level2 started');
+    }
+    stop() {
+        super.stop();
+        // --- Arrêt du fond sonore ---
+        if (this.bgAudio) {
+            this.bgAudio.pause();
+            this.bgAudio.currentTime = 0;
+        }
     }
     spawnGreenBalls() {
         // Créer 15 boules vertes réparties sur la carte
@@ -636,22 +653,34 @@ class Level2 extends Level {
         }
     }
     checkCollision(player, ball) {
-        // Collision classique cercle
-        const playerRadius = player.size / 2;
-        const distance = Math.sqrt(
-            Math.pow(player.x - ball.x, 2) +
-            Math.pow(player.y - ball.y, 2)
-        );
-        return distance < (playerRadius + ball.size / 2);
+        // Même logique que Level1 : ellipse pour Junior, cercle agrandi sinon
+        if (this.character.name === 'Junior') {
+            const rx = player.size * 3 / 2;
+            const ry = player.size * 4.5 / 2;
+            const dx = player.x - ball.x;
+            const dy = player.y - ball.y;
+            return ((dx * dx) / (rx * rx) + (dy * dy) / (ry * ry)) <= Math.pow(1 + ball.size / Math.max(rx, ry), 2);
+        } else {
+            // Cercle agrandi (comme Level1)
+            const playerRadius = player.size * 1.5;
+            const distance = Math.sqrt(
+                Math.pow(player.x - ball.x, 2) +
+                Math.pow(player.y - ball.y, 2)
+            );
+            return distance < (playerRadius + ball.size / 2);
+        }
     }
     update() {
-        if (!this.isRunning) return;
-        // Démarrage au mouvement
+        if (!this.isRunning && !this.hasStarted) return;
         if (!this.hasStarted && (window.keys.ArrowUp || window.keys.ArrowDown || window.keys.ArrowLeft || window.keys.ArrowRight)) {
             this.hasStarted = true;
             this.hideRules();
             this.showHUD();
             this.lastUpdateTime = Date.now();
+        }
+        if (!this.hasStarted) {
+            this.showHUD();
+            return;
         }
         const currentTime = Date.now();
         const deltaTime = (currentTime - this.lastUpdateTime) / 1000;
@@ -710,22 +739,24 @@ class Level2 extends Level {
                 this.handleLevelComplete();
                 return;
             }
-            if (this.timeLeft > 0) {
-                this.timeLeft -= deltaTime;
-            } else {
-                this.isComplete = true;
-                this.isRunning = false;
-                this.projectHours = this.reviewsCollected;
-                this.handleLevelComplete();
-            }
         }
         this.updateHUD();
     }
     updateHUD() {
         if (!this.hud) return;
-        const timeLeftElement = document.getElementById('time-left');
-        if (timeLeftElement) timeLeftElement.textContent = this.timeLeft.toFixed(1);
         const projectHoursElement = document.getElementById('project-hours');
+        if (projectHoursElement) projectHoursElement.textContent = this.projectHours.toString();
+        const overheadElement = document.getElementById('overhead');
+        if (overheadElement) overheadElement.textContent = this.overhead.toFixed(1);
+    }
+    showHUD() {
+        if (this.hud) this.removeHUD();
+        this.hud = document.createElement('div');
+        this.hud.id = 'hud';
+        this.hud.innerHTML = `
+            <div class="hud-item">
+                <span class="hud-label">Revues de projets:</span>
+                <span class="hud-value" id="project-hours">${this.projectHours}</span>
         if (projectHoursElement) projectHoursElement.textContent = this.projectHours.toString();
         const overheadElement = document.getElementById('overhead');
         if (overheadElement) overheadElement.textContent = this.overhead.toFixed(1);
@@ -740,7 +771,7 @@ class Level2 extends Level {
                 <span class="hud-value" id="time-left">${this.timeLeft.toFixed(1)}</span>
             </div>
             <div class="hud-item">
-                <span class="hud-label">Heures projet:</span>
+                <span class="hud-label">Revues de projets:</span>
                 <span class="hud-value" id="project-hours">${this.projectHours}</span>
             </div>
             <div class="hud-item">
@@ -827,6 +858,73 @@ class Level2 extends Level {
             document.body.removeChild(scoreScreen);
             this.game.restartGame();
         });
+    }
+    draw() {
+        // Décor de fond L2
+        const zoom = 1.5;
+        const bg = new Image();
+        bg.src = 'images/L2/decor.png';
+        const player = this.game.player;
+        const canvasW = this.canvas.width;
+        const canvasH = this.canvas.height;
+        const drawScene = () => {
+            try {
+                const imgW = bg.width;
+                const imgH = bg.height;
+                // Centre de la caméra (centré sur le joueur)
+                let camX = player.x;
+                let camY = player.y;
+                const viewW = canvasW / zoom;
+                const viewH = canvasH / zoom;
+                camX = Math.max(viewW / 2, Math.min(imgW - viewW / 2, camX));
+                camY = Math.max(viewH / 2, Math.min(imgH - viewH / 2, camY));
+                const srcX = camX - viewW / 2;
+                const srcY = camY - viewH / 2;
+                this.ctx.clearRect(0, 0, canvasW, canvasH);
+                this.ctx.drawImage(bg, srcX, srcY, viewW, viewH, 0, 0, canvasW, canvasH);
+                const offsetX = srcX;
+                const offsetY = srcY;
+                // Boules vertes
+                this.ctx.fillStyle = "#00cc44";
+                this.greenBalls.forEach(ball => {
+                    this.ctx.beginPath();
+                    this.ctx.arc((ball.x - offsetX) * zoom, (ball.y - offsetY) * zoom, ball.size / 2 * zoom, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+                // Joueur (skin animé ou sphère)
+                this.checkPlayerAnimImages();
+                if (this.playerHasAnim) {
+                    const folder = this.playerAnimFolder;
+                    const frame = this.playerFrame || 0;
+                    const img = new window.Image();
+                    img.src = `images/${folder}/f${frame + 1}.png`;
+                    const width = player.size * 3 * zoom;
+                    const height = player.size * 4.5 * zoom;
+                    const x = (player.x - offsetX) * zoom - width / 2;
+                    const y = (player.y - offsetY) * zoom - height / 2;
+                    img.onload = () => {
+                        try { this.ctx.drawImage(img, x, y, width, height); } catch (e) {}
+                    };
+                    if (img.complete && img.naturalWidth) {
+                        try { this.ctx.drawImage(img, x, y, width, height); } catch (e) {}
+                    }
+                } else {
+                    this.ctx.fillStyle = "#fff";
+                    this.ctx.beginPath();
+                    this.ctx.arc((player.x - offsetX) * zoom, (player.y - offsetY) * zoom, player.size / 2 * zoom, 0, Math.PI * 2);
+                    this.ctx.fill();
+                }
+            } catch (e) {}
+        };
+        if (bg.complete && bg.naturalWidth) {
+            drawScene();
+        } else {
+            bg.onload = drawScene;
+        }
+        // Affiche les règles si pas commencé
+        if (!this.hasStarted && this.rulesPanel) {
+            // Optionnel : tu peux dessiner un overlay ou laisser le panel HTML
+        }
     }
 }
 
