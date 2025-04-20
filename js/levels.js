@@ -330,7 +330,8 @@ class Level1 extends Level {
         // Vérification des collisions avec les balles dorées (toujours, même sans mouvement)
         this.goldenBalls = this.goldenBalls.filter(ball => {
             if (this.checkCollision(this.game.player, ball)) {
-                this.projectHours += 1;
+                // Score proportionnel à l'efficacité (max 3h)
+                this.projectHours += 3 * this.character.efficacite;
                 return false;
             }
             return true;
@@ -572,6 +573,7 @@ class Level2 extends Level {
         this.projectHours = 0;
         this.overhead = 0; // frais généraux
         this.bgAudio = null; // fond sonore
+        this.greenBallsInterval = null; // Timer pour respawn des boules vertes
     }
     getPlayerAnimFolder() {
         const name = this.character.name.toLowerCase();
@@ -624,6 +626,11 @@ class Level2 extends Level {
         }
         this.bgAudio.currentTime = 0;
         this.bgAudio.play().catch(() => {});
+        // --- Timer pour respawn des boules vertes ---
+        if (this.greenBallsInterval) clearInterval(this.greenBallsInterval);
+        this.greenBallsInterval = setInterval(() => {
+            if (this.isRunning) this.spawnGreenBalls();
+        }, 3000);
         console.log('Level2 started');
     }
     stop() {
@@ -633,22 +640,33 @@ class Level2 extends Level {
             this.bgAudio.pause();
             this.bgAudio.currentTime = 0;
         }
+        // --- Arrêt du timer de respawn ---
+        if (this.greenBallsInterval) {
+            clearInterval(this.greenBallsInterval);
+            this.greenBallsInterval = null;
+        }
     }
     spawnGreenBalls() {
-        // Créer 15 boules vertes réparties sur la carte
-        const gridSize = 4;
-        const cellWidth = this.canvas.width / gridSize;
-        const cellHeight = this.canvas.height / gridSize;
-        for (let i = 0; i < gridSize; i++) {
-            for (let j = 0; j < gridSize; j++) {
-                const ballsInCell = Math.floor(Math.random() * 2) + 1;
-                for (let k = 0; k < ballsInCell; k++) {
-                    this.greenBalls.push({
-                        x: (i * cellWidth) + (Math.random() * cellWidth * 0.8) + (cellWidth * 0.1),
-                        y: (j * cellHeight) + (Math.random() * cellHeight * 0.8) + (cellHeight * 0.1),
-                        size: 15
-                    });
-                }
+        // Génère plusieurs paquets de boules vertes (ex : 5 paquets de 5 à 8 boules)
+        this.greenBalls = [];
+        const nbPaquets = 5;
+        const minPerPack = 5, maxPerPack = 8;
+        for (let p = 0; p < nbPaquets; p++) {
+            // Position centrale du paquet
+            const centerX = Math.random() * (this.canvas.width - 100) + 50;
+            const centerY = Math.random() * (this.canvas.height - 100) + 50;
+            const ballsInPack = Math.floor(Math.random() * (maxPerPack - minPerPack + 1)) + minPerPack;
+            for (let i = 0; i < ballsInPack; i++) {
+                // Répartition autour du centre (rayon max 40px)
+                const angle = Math.random() * 2 * Math.PI;
+                const radius = Math.random() * 40;
+                const x = centerX + Math.cos(angle) * radius;
+                const y = centerY + Math.sin(angle) * radius;
+                this.greenBalls.push({
+                    x: Math.max(20, Math.min(this.canvas.width - 20, x)),
+                    y: Math.max(20, Math.min(this.canvas.height - 20, y)),
+                    size: 15
+                });
             }
         }
     }
@@ -719,7 +737,9 @@ class Level2 extends Level {
         // Collision avec les boules vertes
         this.greenBalls = this.greenBalls.filter(ball => {
             if (this.checkCollision(this.game.player, ball)) {
+                // 1 revue de projet, heures projet selon efficacité
                 this.reviewsCollected += 1;
+                this.projectHours += 3 * this.character.efficacite;
                 return false;
             }
             return true;
@@ -735,7 +755,6 @@ class Level2 extends Level {
                 this.overhead = 7.5;
                 this.isComplete = true;
                 this.isRunning = false;
-                this.projectHours = this.reviewsCollected;
                 this.handleLevelComplete();
                 return;
             }
@@ -744,8 +763,8 @@ class Level2 extends Level {
     }
     updateHUD() {
         if (!this.hud) return;
-        const projectHoursElement = document.getElementById('project-hours');
-        if (projectHoursElement) projectHoursElement.textContent = this.projectHours.toString();
+        const reviewsElement = document.getElementById('project-reviews');
+        if (reviewsElement) reviewsElement.textContent = this.reviewsCollected.toString();
         const overheadElement = document.getElementById('overhead');
         if (overheadElement) overheadElement.textContent = this.overhead.toFixed(1);
     }
@@ -755,24 +774,8 @@ class Level2 extends Level {
         this.hud.id = 'hud';
         this.hud.innerHTML = `
             <div class="hud-item">
-                <span class="hud-label">Revues de projets:</span>
-                <span class="hud-value" id="project-hours">${this.projectHours}</span>
-        if (projectHoursElement) projectHoursElement.textContent = this.projectHours.toString();
-        const overheadElement = document.getElementById('overhead');
-        if (overheadElement) overheadElement.textContent = this.overhead.toFixed(1);
-    }
-    showHUD() {
-        if (this.hud) this.removeHUD();
-        this.hud = document.createElement('div');
-        this.hud.id = 'hud';
-        this.hud.innerHTML = `
-            <div class="hud-item">
-                <span class="hud-label">Temps restant:</span>
-                <span class="hud-value" id="time-left">${this.timeLeft.toFixed(1)}</span>
-            </div>
-            <div class="hud-item">
-                <span class="hud-label">Revues de projets:</span>
-                <span class="hud-value" id="project-hours">${this.projectHours}</span>
+                <span class="hud-label">Revues de projet:</span>
+                <span class="hud-value" id="project-reviews">${this.reviewsCollected}</span>
             </div>
             <div class="hud-item">
                 <span class="hud-label">Frais généraux:</span>
@@ -786,16 +789,19 @@ class Level2 extends Level {
     }
     handleLevelComplete() {
         // Affiche un écran de score pour le niveau 2
-        const totalHours = this.projectHours + this.overhead;
-        const overheadPercentage = totalHours > 0 ? (this.overhead / totalHours) * 100 : 0;
+        const revues = this.reviewsCollected;
+        const heures = this.projectHours.toFixed(1);
+        const frais = this.overhead.toFixed(1);
+        const percent = this.projectHours > 0 ? (this.overhead / this.projectHours) * 100 : 0;
         const scoreScreen = document.createElement('div');
         scoreScreen.className = 'score-screen';
         scoreScreen.innerHTML = `
             <h2>Niveau 2 Terminé</h2>
             <div class="score-details">
-                <p>Heures projet cumulées : ${this.projectHours}</p>
-                <p>Frais généraux : ${this.overhead.toFixed(1)}h</p>
-                <p>Pourcentage Frais Généraux : ${overheadPercentage.toFixed(1)}%</p>
+                <p>Revues de projet : <b>${revues}</b></p>
+                <p>Heures projet gagnées : <b>${heures}</b></p>
+                <p>Frais généraux : <b>${frais}h</b></p>
+                <p>% Frais généraux / heures projet : <b>${percent.toFixed(1)}%</b></p>
             </div>
             <div class="score-buttons">
                 <button id="next-level">Niveau Suivant</button>
