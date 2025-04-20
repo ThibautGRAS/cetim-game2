@@ -199,7 +199,7 @@ class Level1 extends Level {
         this.goldenBalls = [];
         this.projectHours = 0;
         this.overhead = 0;
-        this.timeLeft = 5;
+        this.timeLeft = 20; // Limite à 20 secondes
         this.hasStarted = false;
         this.isRunning = true;
         this.isComplete = false;
@@ -364,20 +364,29 @@ class Level1 extends Level {
         console.log('Project Hours:', this.projectHours);
         console.log('Overhead:', this.overhead);
         
-        // Calculer le pourcentage de frais généraux
         const totalHours = this.projectHours + this.overhead;
         const overheadPercentage = totalHours > 0 ? (this.overhead / totalHours) * 100 : 0;
+        let message = '';
+        if (overheadPercentage >= 100) {
+            message = `<div style="color:#ffcc00;font-weight:bold;margin:1em 0;">⚠️ Rapport RH : Les frais généraux dépassent 100% !<br>Merci de consulter votre manager pour une formation accélérée sur la gestion du temps.<br>Impossible de passer au niveau suivant tant que la paperasse prend toute la place !</div>`;
+        } else if (overheadPercentage > 60) {
+            message = `<div style="color:#ffcc00;font-weight:bold;margin:1em 0;">⚠️ Note du service financier : Les frais généraux sont très élevés.<br>On va devoir organiser un séminaire PowerPoint sur l'optimisation des coûts !</div>`;
+        } else if (this.projectHours < 10) {
+            message = `<div style="color:#ffcc00;font-weight:bold;margin:1em 0;">⚠️ Bilan : Peu d'heures projet collectées.<br>On va finir par vous confier la gestion de la machine à café...</div>`;
+        } else {
+            message = `<div style="color:#00ff99;font-weight:bold;margin:1em 0;">👍 Excellent travail ! Les actionnaires sont ravis, le service RH aussi (pour une fois).</div>`;
+        }
         
-        // Créer le tableau de score
         const scoreScreen = document.createElement('div');
         scoreScreen.className = 'score-screen';
         scoreScreen.innerHTML = `
-            <h2>Niveau 1 Terminé</h2>
+            <h2>Reporting Niveau 1</h2>
             <div class="score-details">
-                <p>Heures Projet: ${this.projectHours.toFixed(1)}h</p>
-                <p>Frais Généraux: ${this.overhead.toFixed(1)}h</p>
-                <p>Pourcentage Frais Généraux: ${overheadPercentage.toFixed(1)}%</p>
+                <p><b>Heures Projet réalisées :</b> ${this.projectHours.toFixed(1)}h</p>
+                <p><b>Frais Généraux :</b> ${this.overhead.toFixed(1)}h</p>
+                <p><b>Pourcentage Frais Généraux :</b> ${overheadPercentage.toFixed(1)}%</p>
             </div>
+            ${message}
             <div class="score-buttons">
                 <button id="next-level">Niveau Suivant</button>
                 <button id="main-menu">Retour au menu</button>
@@ -394,7 +403,7 @@ class Level1 extends Level {
                     top: 50%;
                     left: 50%;
                     transform: translate(-50%, -50%);
-                    background: rgba(0, 32, 96, 0.9);
+                    background: rgba(0, 32, 96, 0.95);
                     padding: 30px;
                     border-radius: 10px;
                     border: 2px solid #c8102e;
@@ -402,17 +411,14 @@ class Level1 extends Level {
                     z-index: 100;
                     color: white;
                     box-shadow: 0 0 20px rgba(200, 16, 46, 0.3);
-                }
-                .score-screen h2 {
-                    color: white;
-                    font-size: 2em;
-                    margin-bottom: 20px;
-                    text-transform: uppercase;
-                    letter-spacing: 2px;
+                    font-family: 'Arial', sans-serif;
                 }
                 .score-details {
                     margin: 20px 0;
                     font-size: 1.2em;
+                    background: rgba(255,255,255,0.07);
+                    border-radius: 8px;
+                    padding: 1em;
                 }
                 .score-details p {
                     margin: 10px 0;
@@ -455,8 +461,6 @@ class Level1 extends Level {
 
         // Gestion des boutons
         document.getElementById('next-level').addEventListener('click', () => {
-            // Limite : frais généraux < 100%
-            const overheadPercentage = (this.overhead / (this.projectHours + this.overhead)) * 100;
             if (overheadPercentage < 100) {
                 document.body.removeChild(scoreScreen);
                 this.game.startLevel(2);
@@ -751,8 +755,8 @@ class Level2 extends Level {
             if (Math.random() < this.character.maladresse * 0.1 * deltaTime * 60) {
                 this.overhead += 0.025;
             }
-            if (this.overhead >= 7.5) {
-                this.overhead = 7.5;
+            if (this.overhead >= 20) { // Limite à 20h
+                this.overhead = 20;
                 this.isComplete = true;
                 this.isRunning = false;
                 this.handleLevelComplete();
@@ -788,21 +792,29 @@ class Level2 extends Level {
         return "Ramassez les boules vertes pour collecter des revues de projet ! Chaque revue compte pour 1 heure projet. Attention aux frais généraux : le niveau s'arrête à 7.5h !";
     }
     handleLevelComplete() {
-        // Affiche un écran de score pour le niveau 2
         const revues = this.reviewsCollected;
         const heures = this.projectHours.toFixed(1);
         const frais = this.overhead.toFixed(1);
         const percent = this.projectHours > 0 ? (this.overhead / this.projectHours) * 100 : 0;
+        let message = '';
+        if (percent > 60) {
+            message = `<div style="color:#ffcc00;font-weight:bold;margin:1em 0;">⚠️ Alerte du contrôle de gestion : Les frais généraux dépassent 60% !<br>Votre manager vous propose un atelier "Excel avancé" pour mieux suivre vos coûts.<br>On ne peut pas valider ce reporting pour la direction...</div>`;
+        } else if (revues < 10) {
+            message = `<div style="color:#ffcc00;font-weight:bold;margin:1em 0;">⚠️ Peu de revues de projet collectées.<br>On va finir par vous confier la gestion du stock de stylos...</div>`;
+        } else {
+            message = `<div style="color:#00ff99;font-weight:bold;margin:1em 0;">👍 Bravo ! Les indicateurs sont au vert, le service Qualité vous félicite (et c'est rare) !</div>`;
+        }
         const scoreScreen = document.createElement('div');
         scoreScreen.className = 'score-screen';
         scoreScreen.innerHTML = `
-            <h2>Niveau 2 Terminé</h2>
+            <h2>Reporting Niveau 2</h2>
             <div class="score-details">
-                <p>Revues de projet : <b>${revues}</b></p>
-                <p>Heures projet gagnées : <b>${heures}</b></p>
-                <p>Frais généraux : <b>${frais}h</b></p>
-                <p>% Frais généraux / heures projet : <b>${percent.toFixed(1)}%</b></p>
+                <p><b>Revues de projet :</b> ${revues}</p>
+                <p><b>Heures projet gagnées :</b> ${heures}</p>
+                <p><b>Frais généraux :</b> ${frais}h</p>
+                <p><b>% Frais généraux / heures projet :</b> ${percent.toFixed(1)}%</p>
             </div>
+            ${message}
             <div class="score-buttons">
                 <button id="next-level">Niveau Suivant</button>
                 <button id="main-menu">Retour au menu</button>
@@ -817,7 +829,7 @@ class Level2 extends Level {
                     top: 50%;
                     left: 50%;
                     transform: translate(-50%, -50%);
-                    background: rgba(0, 32, 96, 0.9);
+                    background: rgba(0, 32, 96, 0.95);
                     padding: 30px;
                     border-radius: 10px;
                     border: 2px solid #c8102e;
@@ -825,6 +837,17 @@ class Level2 extends Level {
                     z-index: 100;
                     color: white;
                     box-shadow: 0 0 20px rgba(200, 16, 46, 0.3);
+                    font-family: 'Arial', sans-serif;
+                }
+                .score-details {
+                    margin: 20px 0;
+                    font-size: 1.2em;
+                    background: rgba(255,255,255,0.07);
+                    border-radius: 8px;
+                    padding: 1em;
+                }
+                .score-details p {
+                    margin: 10px 0;
                 }
                 .score-buttons {
                     display: flex;
@@ -857,8 +880,12 @@ class Level2 extends Level {
         }
         document.body.appendChild(scoreScreen);
         document.getElementById('next-level').addEventListener('click', () => {
-            document.body.removeChild(scoreScreen);
-            this.game.startLevel(3);
+            if (percent <= 60) {
+                document.body.removeChild(scoreScreen);
+                this.game.startLevel(3);
+            } else {
+                alert('Les frais généraux doivent être inférieurs à 60% pour passer au niveau suivant.');
+            }
         });
         document.getElementById('main-menu').addEventListener('click', () => {
             document.body.removeChild(scoreScreen);
