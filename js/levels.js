@@ -199,7 +199,7 @@ class Level1 extends Level {
         this.goldenBalls = [];
         this.projectHours = 0;
         this.overhead = 0;
-        this.timeLeft = 20; // Limite à 20 secondes
+        this.timeLeft = window.levelLimits?.level1?.time ?? 20; // Limite configurable
         this.hasStarted = false;
         this.isRunning = true;
         this.isComplete = false;
@@ -223,6 +223,8 @@ class Level1 extends Level {
         }
         this.bgAudio.currentTime = 0;
         this.bgAudio.play().catch(() => {});
+
+        this.showHUD(); // Affiche la barre dès le début
     }
 
     stop() {
@@ -277,6 +279,11 @@ class Level1 extends Level {
 
     update() {
         if (!this.isRunning) return;
+
+        // Affiche le HUD même si le joueur n'a pas encore bougé
+        if (!this.hasStarted) {
+            this.showHUD();
+        }
 
         // Vérifier si le joueur a commencé à bouger
         if (!this.hasStarted && (window.keys.ArrowUp || window.keys.ArrowDown || window.keys.ArrowLeft || window.keys.ArrowRight)) {
@@ -651,19 +658,19 @@ class Level2 extends Level {
         }
     }
     spawnGreenBalls() {
-        // Génère plusieurs paquets de boules vertes (ex : 5 paquets de 5 à 8 boules)
+        // Génère plusieurs paquets de boules vertes espacées (ex : 5 paquets de 5 à 8 boules, rayon max augmenté)
         this.greenBalls = [];
         const nbPaquets = 5;
         const minPerPack = 5, maxPerPack = 8;
         for (let p = 0; p < nbPaquets; p++) {
             // Position centrale du paquet
-            const centerX = Math.random() * (this.canvas.width - 100) + 50;
-            const centerY = Math.random() * (this.canvas.height - 100) + 50;
+            const centerX = Math.random() * (this.canvas.width - 200) + 100;
+            const centerY = Math.random() * (this.canvas.height - 200) + 100;
             const ballsInPack = Math.floor(Math.random() * (maxPerPack - minPerPack + 1)) + minPerPack;
             for (let i = 0; i < ballsInPack; i++) {
-                // Répartition autour du centre (rayon max 40px)
+                // Répartition autour du centre (rayon max 90px)
                 const angle = Math.random() * 2 * Math.PI;
-                const radius = Math.random() * 40;
+                const radius = Math.random() * 90;
                 const x = centerX + Math.cos(angle) * radius;
                 const y = centerY + Math.sin(angle) * radius;
                 this.greenBalls.push({
@@ -755,8 +762,9 @@ class Level2 extends Level {
             if (Math.random() < this.character.maladresse * 0.1 * deltaTime * 60) {
                 this.overhead += 0.025;
             }
-            if (this.overhead >= 20) { // Limite à 20h
-                this.overhead = 20;
+            const overheadLimit = window.levelLimits?.level2?.overhead ?? 20;
+            if (this.overhead >= overheadLimit) {
+                this.overhead = overheadLimit;
                 this.isComplete = true;
                 this.isRunning = false;
                 this.handleLevelComplete();
