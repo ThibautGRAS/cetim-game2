@@ -8,8 +8,16 @@
 </head>
 <body>
     <div id="game-container">
+        <!-- Écran d'accueil -->
+        <div id="start-screen" class="screen active">
+            <div class="start-content">
+                <h1 class="game-title">CETIM GAME</h1>
+                <button id="start-game-btn" class="start-btn">START GAME</button>
+            </div>
+        </div>
+
         <!-- Écran de sélection de personnage -->
-        <div id="character-selection" class="screen active">
+        <div id="character-selection" class="screen">
             <h1>Sélectionnez votre personnage</h1>
             <div class="characters-grid">
                 <div class="character-card" id="Junior" data-character="Junior">
@@ -18,19 +26,19 @@
                     </div>
                     <h2>Junior</h2>
                     <div class="stats">
-                        <div class="stat">
+                        <div class="stat stat-vitesse">
                             <span>Vitesse</span>
                             <div class="bar"><div class="fill" style="width: 80%"></div></div>
                         </div>
-                        <div class="stat">
+                        <div class="stat stat-frais">
                             <span>Frais Généraux</span>
                             <div class="bar"><div class="fill" style="width: 20%"></div></div>
                         </div>
-                        <div class="stat">
+                        <div class="stat stat-efficacite">
                             <span>Efficacité</span>
                             <div class="bar"><div class="fill" style="width: 50%"></div></div>
                         </div>
-                        <div class="stat">
+                        <div class="stat stat-maladresse">
                             <span>Maladresse</span>
                             <div class="bar"><div class="fill" style="width: 60%"></div></div>
                         </div>
@@ -39,19 +47,19 @@
                 <div class="character-card" id="Specialiste" data-character="Specialiste">
                     <h2>Spécialiste</h2>
                     <div class="stats">
-                        <div class="stat">
+                        <div class="stat stat-vitesse">
                             <span>Vitesse</span>
                             <div class="bar"><div class="fill" style="width: 50%"></div></div>
                         </div>
-                        <div class="stat">
+                        <div class="stat stat-frais">
                             <span>Frais Généraux</span>
                             <div class="bar"><div class="fill" style="width: 40%"></div></div>
                         </div>
-                        <div class="stat">
+                        <div class="stat stat-efficacite">
                             <span>Efficacité</span>
                             <div class="bar"><div class="fill" style="width: 60%"></div></div>
                         </div>
-                        <div class="stat">
+                        <div class="stat stat-maladresse">
                             <span>Maladresse</span>
                             <div class="bar"><div class="fill" style="width: 40%"></div></div>
                         </div>
@@ -60,19 +68,19 @@
                 <div class="character-card" id="Referent" data-character="Referent">
                     <h2>Référent</h2>
                     <div class="stats">
-                        <div class="stat">
+                        <div class="stat stat-vitesse">
                             <span>Vitesse</span>
                             <div class="bar"><div class="fill" style="width: 40%"></div></div>
                         </div>
-                        <div class="stat">
+                        <div class="stat stat-frais">
                             <span>Frais Généraux</span>
                             <div class="bar"><div class="fill" style="width: 40%"></div></div>
                         </div>
-                        <div class="stat">
+                        <div class="stat stat-efficacite">
                             <span>Efficacité</span>
                             <div class="bar"><div class="fill" style="width: 70%"></div></div>
                         </div>
-                        <div class="stat">
+                        <div class="stat stat-maladresse">
                             <span>Maladresse</span>
                             <div class="bar"><div class="fill" style="width: 50%"></div></div>
                         </div>
@@ -84,19 +92,19 @@
                     </div>
                     <h2>Expert</h2>
                     <div class="stats">
-                        <div class="stat">
+                        <div class="stat stat-vitesse">
                             <span>Vitesse</span>
                             <div class="bar"><div class="fill" style="width: 35%"></div></div>
                         </div>
-                        <div class="stat">
+                        <div class="stat stat-frais">
                             <span>Frais Généraux</span>
                             <div class="bar"><div class="fill" style="width: 50%"></div></div>
                         </div>
-                        <div class="stat">
+                        <div class="stat stat-efficacite">
                             <span>Efficacité</span>
                             <div class="bar"><div class="fill" style="width: 70%"></div></div>
                         </div>
-                        <div class="stat">
+                        <div class="stat stat-maladresse">
                             <span>Maladresse</span>
                             <div class="bar"><div class="fill" style="width: 20%"></div></div>
                         </div>
@@ -131,37 +139,68 @@
         </div>
     </div>
 
+    <!-- Son de survol menu -->
+    <audio id="menu-pop-sound" src="images/menu/pop.wav" preload="auto"></audio>
+
     <!-- Chargement des scripts dans le bon ordre -->
     <script src="js/keys.js"></script>
     <script src="js/characters.js"></script>
     <script src="js/levels.js"></script>
     <script src="js/game.js"></script>
     <script>
-        // Attendre que tous les scripts soient chargés
-        window.addEventListener('load', () => {
-            console.log('Page fully loaded, initializing game');
-            
-            // Vérifier que tous les éléments nécessaires sont présents
-            const canvas = document.getElementById('game-canvas');
-            const characterSelection = document.getElementById('character-selection');
-            const gameScreen = document.getElementById('game-screen');
-            const endScreen = document.getElementById('end-screen');
-            
-            if (!canvas || !characterSelection || !gameScreen || !endScreen) {
-                console.error('Required elements not found!');
-                return;
+        // Débloque l'audio sur interaction utilisateur (Chrome/Safari)
+        function unlockAudio() {
+            const pop = document.getElementById('menu-pop-sound');
+            if (pop) {
+                pop.volume = 0.5;
+                pop.play().then(() => {
+                    pop.pause();
+                    pop.currentTime = 0;
+                }).catch(() => {});
             }
-            
-            // Définir la taille du canvas
-            canvas.width = 800;
-            canvas.height = 600;
-            
-            try {
-                // Créer l'instance de Game
-                window.game = new Game();
-                console.log('Game instance created successfully');
-            } catch (error) {
-                console.error('Error creating game instance:', error);
+            window.removeEventListener('pointerdown', unlockAudio);
+        }
+        window.addEventListener('pointerdown', unlockAudio);
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const pop = document.getElementById('menu-pop-sound');
+            document.querySelectorAll('.character-card').forEach(card => {
+                card.addEventListener('mouseenter', () => {
+                    if (pop && pop.readyState >= 2) {
+                        try {
+                            pop.currentTime = 0;
+                            pop.play();
+                        } catch (e) {}
+                    }
+                });
+            });
+
+            const startScreen = document.getElementById('start-screen');
+            const charScreen = document.getElementById('character-selection');
+            const startBtn = document.getElementById('start-game-btn');
+            if (startBtn && startScreen && charScreen) {
+                startBtn.addEventListener('click', () => {
+                    // Masquer tous les écrans
+                    document.querySelectorAll('.screen').forEach(screen => {
+                        screen.style.display = 'none';
+                        screen.classList.remove('active');
+                    });
+                    // Afficher la sélection des personnages
+                    charScreen.style.display = '';
+                    charScreen.classList.add('active');
+                    // Initialiser le jeu UNIQUEMENT ici
+                    if (!window.game) {
+                        const canvas = document.getElementById('game-canvas');
+                        canvas.width = 800;
+                        canvas.height = 600;
+                        try {
+                            window.game = new Game();
+                            console.log('Game instance created successfully');
+                        } catch (error) {
+                            console.error('Error creating game instance:', error);
+                        }
+                    }
+                });
             }
         });
     </script>
