@@ -237,19 +237,31 @@ class Level1 extends Level {
     }
 
     spawnGoldenBalls() {
-        // Créer 20 boules au début, bien éparpillées
-        const gridSize = 4; // 4x4 grid
-        const cellWidth = this.canvas.width / gridSize;
-        const cellHeight = this.canvas.height / gridSize;
-        
-        for (let i = 0; i < gridSize; i++) {
-            for (let j = 0; j < gridSize; j++) {
-                // Ajouter 1-2 boules par cellule
-                const ballsInCell = Math.floor(Math.random() * 2) + 1;
+        // Place les boules uniquement dans la zone du décor (image)
+        const decorImg = new window.Image();
+        decorImg.src = 'images/L1/decor.PNG';
+        let decorW = this.canvas.width;
+        let decorH = this.canvas.height;
+        if (decorImg.naturalWidth && decorImg.naturalHeight) {
+            decorW = decorImg.naturalWidth;
+            decorH = decorImg.naturalHeight;
+        }
+        const gridX = 6, gridY = 5; // Plus de cellules
+        const cellWidth = decorW / gridX;
+        const cellHeight = decorH / gridY;
+
+        this.goldenBalls = [];
+        for (let i = 0; i < gridX; i++) {
+            for (let j = 0; j < gridY; j++) {
+                const ballsInCell = Math.floor(Math.random() * 2) + 1; // 1 à 2 boules par cellule
                 for (let k = 0; k < ballsInCell; k++) {
+                    // Toujours dans la zone du décor, jamais sur le bord droit
+                    const margin = 18;
+                    const x = Math.max(margin, Math.min(decorW - margin, (i * cellWidth) + (Math.random() * (cellWidth - 2 * margin)) + margin));
+                    const y = Math.max(margin, Math.min(decorH - margin, (j * cellHeight) + (Math.random() * (cellHeight - 2 * margin)) + margin));
                     this.goldenBalls.push({
-                        x: (i * cellWidth) + (Math.random() * cellWidth * 0.8) + (cellWidth * 0.1),
-                        y: (j * cellHeight) + (Math.random() * cellHeight * 0.8) + (cellHeight * 0.1),
+                        x,
+                        y,
                         size: 15
                     });
                 }
@@ -280,48 +292,53 @@ class Level1 extends Level {
     update() {
         if (!this.isRunning) return;
 
-        // Affiche le HUD même si le joueur n'a pas encore bougé
         if (!this.hasStarted) {
             this.showHUD();
         }
 
-        // Vérifier si le joueur a commencé à bouger
         if (!this.hasStarted && (window.keys.ArrowUp || window.keys.ArrowDown || window.keys.ArrowLeft || window.keys.ArrowRight)) {
-            console.log('Level1: Player started moving with speed:', this.playerSpeed, 'position:', this.game.player.x, this.game.player.y);
             this.hasStarted = true;
             this.hideRules();
             this.showHUD();
-            this.lastUpdateTime = Date.now(); // Réinitialiser le temps lors du premier mouvement
+            this.lastUpdateTime = Date.now();
         }
 
         const currentTime = Date.now();
-        const deltaTime = (currentTime - this.lastUpdateTime) / 1000; // Convertir en secondes
+        const deltaTime = (currentTime - this.lastUpdateTime) / 1000;
         this.lastUpdateTime = currentTime;
 
-        // Mise à jour de la position du joueur avec la vitesse calculée
         let moved = false;
         if (this.hasStarted) {
-            let dx = 0;
-            let dy = 0;
-
+            let dx = 0, dy = 0;
             if (window.keys.ArrowUp) { dy -= this.playerSpeed; moved = true; }
             if (window.keys.ArrowDown) { dy += this.playerSpeed; moved = true; }
             if (window.keys.ArrowLeft) { dx -= this.playerSpeed; moved = true; }
             if (window.keys.ArrowRight) { dx += this.playerSpeed; moved = true; }
-
-            // Normaliser la vitesse en diagonale
             if (dx !== 0 && dy !== 0) {
                 const factor = this.playerSpeed / Math.sqrt(dx * dx + dy * dy);
                 dx *= factor;
                 dy *= factor;
             }
 
-            // Appliquer le déplacement
-            this.game.player.x = Math.max(0, Math.min(this.canvas.width - 20, this.game.player.x + dx));
-            this.game.player.y = Math.max(0, Math.min(this.canvas.height - 20, this.game.player.y + dy));
+            // Limites du décor (image)
+            const decorImg = new window.Image();
+            decorImg.src = 'images/L1/decor.PNG';
+            const playerSize = this.game.player.size;
+
+            // Si l'image est chargée, utilise ses dimensions, sinon fallback sur le canvas
+            let minX = playerSize / 2;
+            let minY = playerSize / 2;
+            let maxX = this.canvas.width - playerSize / 2;
+            let maxY = this.canvas.height - playerSize / 2;
+            if (decorImg.complete && decorImg.naturalWidth && decorImg.naturalHeight) {
+                maxX = decorImg.naturalWidth - playerSize / 2;
+                maxY = decorImg.naturalHeight - playerSize / 2;
+            }
+
+            this.game.player.x = Math.max(minX, Math.min(this.game.player.x + dx, maxX));
+            this.game.player.y = Math.max(minY, Math.min(this.game.player.y + dy, maxY));
         }
 
-        // Animation générique si images présentes
         this.checkPlayerAnimImages();
         if (this.playerHasAnim && moved) {
             this.playerFrameTimer += deltaTime * 1000;
@@ -334,26 +351,27 @@ class Level1 extends Level {
             this.playerFrameTimer = 0;
         }
 
-        // Vérification des collisions avec les balles dorées (toujours, même sans mouvement)
         this.goldenBalls = this.goldenBalls.filter(ball => {
             if (this.checkCollision(this.game.player, ball)) {
-                // Score proportionnel à l'efficacité (max 3h)
                 this.projectHours += 3 * this.character.efficacite;
+                // Son de boule dorée
+                try {
+                    const audio = new Audio('images/L1/ball.wav');
+                    audio.volume = 0.7;
+                    audio.play();
+                } catch (e) {}
                 return false;
             }
             return true;
         });
 
-        // Mise à jour des frais généraux en fonction du temps
         if (this.hasStarted) {
             this.overhead += this.character.frais * 0.05 * deltaTime * 60;
 
-            // Gestion de la maladresse
             if (Math.random() < this.character.maladresse * 0.1 * deltaTime * 60) {
                 this.overhead += 0.025;
             }
 
-            // Mise à jour du temps restant
             if (this.timeLeft > 0) {
                 this.timeLeft -= deltaTime;
             } else {
@@ -483,8 +501,7 @@ class Level1 extends Level {
     }
 
     draw() {
-        // Paramètres de zoom et centrage
-        const zoom = 1.5;
+        // Décor sans zoom
         const bg = new Image();
         bg.src = 'images/L1/decor.PNG';
 
@@ -502,22 +519,18 @@ class Level1 extends Level {
                 let camY = player.y;
 
                 // Taille de la vue (canvas en coordonnées décor)
-                const viewW = canvasW / zoom;
-                const viewH = canvasH / zoom;
+                const viewW = canvasW;
+                const viewH = canvasH;
 
-                // Limiter la caméra pour ne pas sortir du décor
                 camX = Math.max(viewW / 2, Math.min(imgW - viewW / 2, camX));
                 camY = Math.max(viewH / 2, Math.min(imgH - viewH / 2, camY));
 
-                // Rectangle source dans l'image décor
                 const srcX = camX - viewW / 2;
                 const srcY = camY - viewH / 2;
 
-                // Dessiner le décor zoomé et centré sur le joueur
                 this.ctx.clearRect(0, 0, canvasW, canvasH);
                 this.ctx.drawImage(bg, srcX, srcY, viewW, viewH, 0, 0, canvasW, canvasH);
 
-                // Décalage à appliquer pour dessiner les éléments du jeu
                 const offsetX = srcX;
                 const offsetY = srcY;
 
@@ -525,23 +538,21 @@ class Level1 extends Level {
                 this.ctx.fillStyle = '#ffcc00';
                 this.goldenBalls.forEach(ball => {
                     this.ctx.beginPath();
-                    this.ctx.arc((ball.x - offsetX) * zoom, (ball.y - offsetY) * zoom, ball.size / 2 * zoom, 0, Math.PI * 2);
+                    this.ctx.arc(ball.x - offsetX, ball.y - offsetY, ball.size / 2, 0, Math.PI * 2);
                     this.ctx.fill();
                 });
 
-                // Vérifie la présence des images d'animation une seule fois (non bloquant)
                 this.checkPlayerAnimImages();
 
-                // Dessiner le joueur animé si images présentes, sinon sphère
                 if (this.playerHasAnim) {
                     const folder = this.playerAnimFolder;
                     const frame = this.playerFrame || 0;
                     const img = new window.Image();
                     img.src = `images/${folder}/f${frame + 1}.png`;
-                    const width = this.game.player.size * 3 * zoom;
-                    const height = this.game.player.size * 4.5 * zoom;
-                    const x = (this.game.player.x - offsetX) * zoom - width / 2;
-                    const y = (this.game.player.y - offsetY) * zoom - height / 2;
+                    const width = this.game.player.size * 3;
+                    const height = this.game.player.size * 4.5;
+                    const x = (this.game.player.x - offsetX) - width / 2;
+                    const y = (this.game.player.y - offsetY) - height / 2;
                     img.onload = () => {
                         try { this.ctx.drawImage(img, x, y, width, height); } catch (e) {}
                     };
@@ -551,12 +562,10 @@ class Level1 extends Level {
                 } else {
                     this.ctx.fillStyle = this.getSphereColor();
                     this.ctx.beginPath();
-                    this.ctx.arc((player.x - offsetX) * zoom, (player.y - offsetY) * zoom, player.size / 2 * zoom, 0, Math.PI * 2);
+                    this.ctx.arc(player.x - offsetX, player.y - offsetY, player.size / 2, 0, Math.PI * 2);
                     this.ctx.fill();
                 }
-            } catch (e) {
-                // Ne jamais bloquer la boucle de jeu sur une erreur de dessin
-            }
+            } catch (e) {}
         };
 
         if (bg.complete && bg.naturalWidth) {
@@ -658,24 +667,30 @@ class Level2 extends Level {
         }
     }
     spawnGreenBalls() {
-        // Génère plusieurs paquets de boules vertes espacées (ex : 5 paquets de 5 à 8 boules, rayon max augmenté)
+        // Place les boules uniquement dans la zone du décor (image)
+        const decorImg = new window.Image();
+        decorImg.src = 'images/L2/decor.png';
+        let decorW = this.canvas.width;
+        let decorH = this.canvas.height;
+        if (decorImg.naturalWidth && decorImg.naturalHeight) {
+            decorW = decorImg.naturalWidth;
+            decorH = decorImg.naturalHeight;
+        }
         this.greenBalls = [];
-        const nbPaquets = 5;
-        const minPerPack = 5, maxPerPack = 8;
+        const nbPaquets = 4;
+        const minPerPack = 1, maxPerPack = 2; // 1 à 2 boules par paquet
         for (let p = 0; p < nbPaquets; p++) {
-            // Position centrale du paquet
-            const centerX = Math.random() * (this.canvas.width - 200) + 100;
-            const centerY = Math.random() * (this.canvas.height - 200) + 100;
+            const centerX = Math.random() * (decorW - 200) + 100;
+            const centerY = Math.random() * (decorH - 200) + 100;
             const ballsInPack = Math.floor(Math.random() * (maxPerPack - minPerPack + 1)) + minPerPack;
             for (let i = 0; i < ballsInPack; i++) {
-                // Répartition autour du centre (rayon max 90px)
                 const angle = Math.random() * 2 * Math.PI;
                 const radius = Math.random() * 90;
-                const x = centerX + Math.cos(angle) * radius;
-                const y = centerY + Math.sin(angle) * radius;
+                const x = Math.max(20, Math.min(decorW - 20, centerX + Math.cos(angle) * radius));
+                const y = Math.max(20, Math.min(decorH - 20, centerY + Math.sin(angle) * radius));
                 this.greenBalls.push({
-                    x: Math.max(20, Math.min(this.canvas.width - 20, x)),
-                    y: Math.max(20, Math.min(this.canvas.height - 20, y)),
+                    x,
+                    y,
                     size: 15
                 });
             }
@@ -728,8 +743,20 @@ class Level2 extends Level {
                 dx *= factor;
                 dy *= factor;
             }
-            this.game.player.x = Math.max(0, Math.min(this.canvas.width - 20, this.game.player.x + dx));
-            this.game.player.y = Math.max(0, Math.min(this.canvas.height - 20, this.game.player.y + dy));
+            // Limites du décor (image)
+            const decorImg = new window.Image();
+            decorImg.src = 'images/L2/decor.png';
+            const playerSize = this.game.player.size;
+            let minX = playerSize / 2;
+            let minY = playerSize / 2;
+            let maxX = this.canvas.width - playerSize / 2;
+            let maxY = this.canvas.height - playerSize / 2;
+            if (decorImg.naturalWidth && decorImg.naturalHeight) {
+                maxX = decorImg.naturalWidth - playerSize / 2;
+                maxY = decorImg.naturalHeight - playerSize / 2;
+            }
+            this.game.player.x = Math.max(minX, Math.min(this.game.player.x + dx, maxX));
+            this.game.player.y = Math.max(minY, Math.min(this.game.player.y + dy, maxY));
         }
 
         // Animation joueur
@@ -745,18 +772,23 @@ class Level2 extends Level {
             this.playerFrameTimer = 0;
         }
 
-        // Collision avec les boules vertes
+        // Collision avec les boules vertes + son
         this.greenBalls = this.greenBalls.filter(ball => {
             if (this.checkCollision(this.game.player, ball)) {
                 // 1 revue de projet, heures projet selon efficacité
                 this.reviewsCollected += 1;
                 this.projectHours += 3 * this.character.efficacite;
+                // Joue le son de boule verte
+                try {
+                    const audio = new Audio('images/L2/ball.wav');
+                    audio.volume = 0.7;
+                    audio.play();
+                } catch (e) {}
                 return false;
             }
             return true;
         });
 
-        // Frais généraux (comme Level1)
         if (this.hasStarted) {
             this.overhead += this.character.frais * 0.05 * deltaTime * 60;
             if (Math.random() < this.character.maladresse * 0.1 * deltaTime * 60) {

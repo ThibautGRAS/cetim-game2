@@ -33,9 +33,6 @@ class Game {
         // Configurer les écouteurs d'événements
         this.setupEventListeners();
         
-        // Afficher l'écran de sélection des personnages
-        this.showScreen('character-selection');
-        
         console.log('Game initialized successfully');
     }
 
@@ -133,7 +130,17 @@ class Game {
         console.log('Character selected successfully:', this.character);
         
         // Afficher l'écran de jeu
-        this.showScreen('game-screen');
+        // Masquer tous les écrans
+        document.querySelectorAll('.screen').forEach(screen => {
+            screen.style.display = 'none';
+            screen.classList.remove('active');
+        });
+        // Afficher l'écran de jeu
+        const gameScreen = document.getElementById('game-screen');
+        if (gameScreen) {
+            gameScreen.style.display = '';
+            gameScreen.classList.add('active');
+        }
         
         // Démarrer le niveau 1
         this.startLevel(1);
