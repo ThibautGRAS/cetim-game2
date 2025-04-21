@@ -83,35 +83,51 @@ class Game {
 
     restartGame() {
         console.log('Restarting game...');
-        this.isRestartingLevel = false; // Réinitialiser l'état de redémarrage
-        // Réinitialiser les variables du jeu
+        this.isRestartingLevel = false;
         this.projectHours = 0;
         this.overhead = 0;
         this.isFirstPlay = false;
-        
+
         // Arrêter et détruire le niveau actuel
-        if (this.currentLevel) {  // Changé de this.level à this.currentLevel
+        if (this.currentLevel) {
+            // Arrêter la musique de fond si présente
+            if (this.currentLevel.bgAudio) {
+                try {
+                    this.currentLevel.bgAudio.pause();
+                    this.currentLevel.bgAudio.currentTime = 0;
+                } catch (e) {}
+            }
             this.currentLevel.stop();
             this.currentLevel = null;
         }
-        
+
         // Réinitialiser la position du joueur
         this.player = {
             x: this.canvas.width / 2,
             y: this.canvas.height / 2,
             size: 20,
             baseSpeed: 5,
-            speed: this.character ? 5 * this.character.vitesse : 5 // Recalculer la vitesse
+            speed: this.character ? 5 * this.character.vitesse : 5
         };
-        
+
         // Supprimer le HUD s'il existe
         const hud = document.getElementById('hud');
         if (hud) {
             document.body.removeChild(hud);
         }
-        
-        // Afficher l'écran de sélection des personnages
-        this.showScreen('character-selection');
+
+        // Masquer tous les écrans
+        document.querySelectorAll('.screen').forEach(screen => {
+            screen.style.display = 'none';
+            screen.classList.remove('active');
+        });
+
+        // Afficher et activer l'écran de sélection des personnages
+        const charScreen = document.getElementById('character-selection');
+        if (charScreen) {
+            charScreen.style.display = '';
+            charScreen.classList.add('active');
+        }
     }
 
     restartLevel(levelNumber) {

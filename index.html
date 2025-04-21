@@ -19,98 +19,7 @@
         <!-- Écran de sélection de personnage -->
         <div id="character-selection" class="screen">
             <h1>Sélectionnez votre personnage</h1>
-            <div class="characters-grid">
-                <div class="character-card" id="Junior" data-character="Junior">
-                    <div class="character-portrait">
-                        <img src="images/junior/junior.png" alt="Portrait Junior" />
-                    </div>
-                    <h2>Junior</h2>
-                    <div class="stats">
-                        <div class="stat stat-vitesse">
-                            <span>Vitesse</span>
-                            <div class="bar"><div class="fill" style="width: 80%"></div></div>
-                        </div>
-                        <div class="stat stat-frais">
-                            <span>Frais Généraux</span>
-                            <div class="bar"><div class="fill" style="width: 20%"></div></div>
-                        </div>
-                        <div class="stat stat-efficacite">
-                            <span>Efficacité</span>
-                            <div class="bar"><div class="fill" style="width: 50%"></div></div>
-                        </div>
-                        <div class="stat stat-maladresse">
-                            <span>Maladresse</span>
-                            <div class="bar"><div class="fill" style="width: 60%"></div></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="character-card" id="Specialiste" data-character="Specialiste">
-                    <h2>Spécialiste</h2>
-                    <div class="stats">
-                        <div class="stat stat-vitesse">
-                            <span>Vitesse</span>
-                            <div class="bar"><div class="fill" style="width: 50%"></div></div>
-                        </div>
-                        <div class="stat stat-frais">
-                            <span>Frais Généraux</span>
-                            <div class="bar"><div class="fill" style="width: 40%"></div></div>
-                        </div>
-                        <div class="stat stat-efficacite">
-                            <span>Efficacité</span>
-                            <div class="bar"><div class="fill" style="width: 60%"></div></div>
-                        </div>
-                        <div class="stat stat-maladresse">
-                            <span>Maladresse</span>
-                            <div class="bar"><div class="fill" style="width: 40%"></div></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="character-card" id="Referent" data-character="Referent">
-                    <h2>Référent</h2>
-                    <div class="stats">
-                        <div class="stat stat-vitesse">
-                            <span>Vitesse</span>
-                            <div class="bar"><div class="fill" style="width: 40%"></div></div>
-                        </div>
-                        <div class="stat stat-frais">
-                            <span>Frais Généraux</span>
-                            <div class="bar"><div class="fill" style="width: 40%"></div></div>
-                        </div>
-                        <div class="stat stat-efficacite">
-                            <span>Efficacité</span>
-                            <div class="bar"><div class="fill" style="width: 70%"></div></div>
-                        </div>
-                        <div class="stat stat-maladresse">
-                            <span>Maladresse</span>
-                            <div class="bar"><div class="fill" style="width: 50%"></div></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="character-card" id="Expert" data-character="Expert">
-                    <div class="character-portrait">
-                        <img src="images/expert/expert.png" alt="Portrait Expert" />
-                    </div>
-                    <h2>Expert</h2>
-                    <div class="stats">
-                        <div class="stat stat-vitesse">
-                            <span>Vitesse</span>
-                            <div class="bar"><div class="fill" style="width: 35%"></div></div>
-                        </div>
-                        <div class="stat stat-frais">
-                            <span>Frais Généraux</span>
-                            <div class="bar"><div class="fill" style="width: 50%"></div></div>
-                        </div>
-                        <div class="stat stat-efficacite">
-                            <span>Efficacité</span>
-                            <div class="bar"><div class="fill" style="width: 70%"></div></div>
-                        </div>
-                        <div class="stat stat-maladresse">
-                            <span>Maladresse</span>
-                            <div class="bar"><div class="fill" style="width: 20%"></div></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <div class="characters-grid"></div>
         </div>
 
         <!-- Écran de jeu -->
@@ -145,6 +54,50 @@
     <!-- Chargement des scripts dans le bon ordre -->
     <script src="js/keys.js"></script>
     <script src="js/characters.js"></script>
+    <script>
+        // Génération dynamique des cartes personnages à partir de characters.js
+        document.addEventListener('DOMContentLoaded', function() {
+            const grid = document.querySelector('.characters-grid');
+            if (!grid || typeof window.characters !== 'object') return;
+            grid.innerHTML = '';
+            const statLabels = {
+                vitesse: 'Vitesse',
+                frais: 'Frais Généraux',
+                efficacite: 'Efficacité',
+                maladresse: 'Maladresse'
+            };
+            const imgMap = {
+                Junior: 'images/junior/junior.png',
+                Specialiste: 'images/specialiste/specialiste.png',
+                Referent: 'images/referent/referent.png',
+                Expert: 'images/expert/expert.png'
+            };
+            Object.entries(window.characters).forEach(([name, stats]) => {
+                const card = document.createElement('div');
+                card.className = 'character-card';
+                card.id = name;
+                card.setAttribute('data-character', name);
+                card.innerHTML = `
+                    <div class="character-portrait">
+                        <img src="${imgMap[name] || ''}" alt="Portrait ${name}" />
+                    </div>
+                    <h2>${name === 'Specialiste' ? 'Spécialiste' : name === 'Referent' ? 'Référent' : name}</h2>
+                    <div class="stats">
+                        ${Object.entries(statLabels).map(([key, label]) => `
+                            <div class="stat stat-${key}">
+                                <span>${label}</span>
+                                <div class="bar">
+                                    <div class="fill" style="width: ${Math.round((stats[key] ?? 0) * 100)}%"></div>
+                                </div>
+                                <span style="font-size:0.9em;color:#fff8;">${Math.round((stats[key] ?? 0) * 100)}%</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        });
+    </script>
     <script src="js/levels.js"></script>
     <script src="js/game.js"></script>
     <script>
@@ -178,6 +131,7 @@
             const startScreen = document.getElementById('start-screen');
             const charScreen = document.getElementById('character-selection');
             const startBtn = document.getElementById('start-game-btn');
+            const restartBtn = document.getElementById('restart-button');
             if (startBtn && startScreen && charScreen) {
                 startBtn.addEventListener('click', () => {
                     // Masquer tous les écrans
@@ -200,6 +154,18 @@
                             console.error('Error creating game instance:', error);
                         }
                     }
+                });
+            }
+            if (restartBtn && charScreen) {
+                restartBtn.addEventListener('click', () => {
+                    // Masquer tous les écrans
+                    document.querySelectorAll('.screen').forEach(screen => {
+                        screen.style.display = 'none';
+                        screen.classList.remove('active');
+                    });
+                    // Afficher la sélection des personnages
+                    charScreen.style.display = '';
+                    charScreen.classList.add('active');
                 });
             }
         });
