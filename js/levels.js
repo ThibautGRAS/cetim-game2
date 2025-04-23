@@ -159,6 +159,12 @@ class Level1 extends Level {
         this.playerHasAnim = false; // Indique si les images existent
         this.playerAnimFolder = this.getPlayerAnimFolder();
         this.bgAudio = null; // Ajout du fond sonore
+        this.maskImg = null;
+        this.maskCanvas = null;
+        this.maskCtx = null;
+        this.maskReady = false;
+        this.decorW = null;
+        this.decorH = null;
         console.log('Level1 initialized with speed:', this.baseSpeed, 'for character:', this.character.name, 'vitesse:', this.character.vitesse, 'baseSpeed:', this.baseSpeed);
     }
 
@@ -225,6 +231,35 @@ class Level1 extends Level {
         this.bgAudio.play().catch(() => {});
 
         this.showHUD(); // Affiche la barre dès le début
+
+        // Prépare le masque pour les collisions
+        this.maskImg = new window.Image();
+        this.maskImg.src = 'images/L1/decor_masque.png';
+        this.maskReady = false;
+
+        // Charge le décor pour avoir la taille réelle
+        this.decorImg = new window.Image();
+        this.decorImg.src = 'images/L1/decor.PNG';
+        this.decorW = null;
+        this.decorH = null;
+
+        // Initialise le masque quand l'image est chargée
+        this.decorImg.onload = () => {
+            this.decorW = this.decorImg.naturalWidth;
+            this.decorH = this.decorImg.naturalHeight;
+            if (this.maskReady) this.ensurePlayerInWhiteZone();
+        };
+
+        this.maskImg.onload = () => {
+            // Crée un canvas temporaire pour lire les pixels du masque
+            this.maskCanvas = document.createElement('canvas');
+            this.maskCanvas.width = this.maskImg.naturalWidth;
+            this.maskCanvas.height = this.maskImg.naturalHeight;
+            this.maskCtx = this.maskCanvas.getContext('2d');
+            this.maskCtx.drawImage(this.maskImg, 0, 0);
+            this.maskReady = true;
+            if (this.decorW && this.decorH) this.ensurePlayerInWhiteZone();
+        };
     }
 
     stop() {
@@ -259,34 +294,75 @@ class Level1 extends Level {
                     const margin = 18;
                     const x = Math.max(margin, Math.min(decorW - margin, (i * cellWidth) + (Math.random() * (cellWidth - 2 * margin)) + margin));
                     const y = Math.max(margin, Math.min(decorH - margin, (j * cellHeight) + (Math.random() * (cellHeight - 2 * margin)) + margin));
-                    this.goldenBalls.push({
-                        x,
-                        y,
-                        size: 15
-                    });
+                    if (this.isWhiteOnMask(x, y)) {
+                        this.goldenBalls.push({
+                            x,
+                            y,
+                            size: 15
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    isWhiteOnMask(x, y) {
+        if (!this.maskReady || !this.maskCtx || !this.decorW || !this.decorH) return true;
+        // Conversion coordonnées décor -> masque
+        const maskW = this.maskImg.naturalWidth;
+        const maskH = this.maskImg.naturalHeight;
+        const mx = Math.round(x * maskW / this.decorW);
+        const my = Math.round(y * maskH / this.decorH);
+        if (mx < 0 || my < 0 || mx >= maskW || my >= maskH) return false;
+        const pixel = this.maskCtx.getImageData(mx, my, 1, 1).data;
+        return pixel[0] > 200 && pixel[1] > 200 && pixel[2] > 200;
+    }
+
+    ensurePlayerInWhiteZone() {
+        // Replace le joueur au centre si sa position n'est pas blanche
+        if (!this.isWhiteOnMask(this.game.player.x, this.game.player.y)) {
+            // Cherche un point blanc au centre
+            const cx = this.decorW / 2;
+            const cy = this.decorH / 2;
+            if (this.isWhiteOnMask(cx, cy)) {
+                this.game.player.x = cx;
+                this.game.player.y = cy;
+            } else {
+                // Cherche un point blanc dans la zone centrale
+                for (let r = 10; r < 200; r += 10) {
+                    for (let a = 0; a < 2 * Math.PI; a += Math.PI / 8) {
+                        const x = cx + Math.cos(a) * r;
+                        const y = cy + Math.sin(a) * r;
+                        if (this.isWhiteOnMask(x, y)) {
+                            this.game.player.x = x;
+                            this.game.player.y = y;
+                            return;
+                        }
+                    }
                 }
             }
         }
     }
 
     checkCollision(player, ball) {
-        if (this.character.name === 'Junior') {
-            // Collision ellipse pour l'image redimensionnée
-            const rx = player.size * 3 / 2;
-            const ry = player.size * 4.5 / 2;
-            const dx = player.x - ball.x;
-            const dy = player.y - ball.y;
-            // Test d'inclusion dans l'ellipse + rayon de la boule
-            return ((dx * dx) / (rx * rx) + (dy * dy) / (ry * ry)) <= Math.pow(1 + ball.size / Math.max(rx, ry), 2);
-        } else {
-            // Collision classique cercle
-            const playerRadius = player.size / 2;
-            const distance = Math.sqrt(
-                Math.pow(player.x - ball.x, 2) + 
-                Math.pow(player.y - ball.y, 2)
-            );
-            return distance < (playerRadius + ball.size / 2);
-        }
+        // Ajuster la taille de collision selon le personnage
+        const collisionSizes = {
+            'Junior': { width: 2.5, height: 4.0 },    // Junior est plus grand/fin
+            'Specialiste': { width: 2.8, height: 3.5 }, 
+            'Referent': { width: 3.0, height: 3.2 },
+            'Expert': { width: 3.2, height: 3.0 }     // Expert est plus trapu
+        };
+
+        const size = collisionSizes[this.character.name] || { width: 3, height: 3 };
+        
+        // Rectangle de collision adapté à chaque personnage
+        const rx = player.size * size.width / 2;  // Largeur de collision
+        const ry = player.size * size.height / 2; // Hauteur de collision
+        const dx = player.x - ball.x;
+        const dy = player.y - ball.y;
+
+        // Test d'inclusion elliptique + rayon de la boule
+        return ((dx * dx) / (rx * rx) + (dy * dy) / (ry * ry)) <= Math.pow(1 + ball.size / Math.max(rx, ry), 2);
     }
 
     update() {
@@ -325,7 +401,6 @@ class Level1 extends Level {
             decorImg.src = 'images/L1/decor.PNG';
             const playerSize = this.game.player.size;
 
-            // Si l'image est chargée, utilise ses dimensions, sinon fallback sur le canvas
             let minX = playerSize / 2;
             let minY = playerSize / 2;
             let maxX = this.canvas.width - playerSize / 2;
@@ -335,6 +410,7 @@ class Level1 extends Level {
                 maxY = decorImg.naturalHeight - playerSize / 2;
             }
 
+            // Simplement appliquer les limites sans vérifier le masque
             this.game.player.x = Math.max(minX, Math.min(this.game.player.x + dx, maxX));
             this.game.player.y = Math.max(minY, Math.min(this.game.player.y + dy, maxY));
         }
@@ -697,22 +773,22 @@ class Level2 extends Level {
         }
     }
     checkCollision(player, ball) {
-        // Même logique que Level1 : ellipse pour Junior, cercle agrandi sinon
-        if (this.character.name === 'Junior') {
-            const rx = player.size * 3 / 2;
-            const ry = player.size * 4.5 / 2;
-            const dx = player.x - ball.x;
-            const dy = player.y - ball.y;
-            return ((dx * dx) / (rx * rx) + (dy * dy) / (ry * ry)) <= Math.pow(1 + ball.size / Math.max(rx, ry), 2);
-        } else {
-            // Cercle agrandi (comme Level1)
-            const playerRadius = player.size * 1.5;
-            const distance = Math.sqrt(
-                Math.pow(player.x - ball.x, 2) +
-                Math.pow(player.y - ball.y, 2)
-            );
-            return distance < (playerRadius + ball.size / 2);
-        }
+        // Même logique que Level1 - zones de collision adaptées
+        const collisionSizes = {
+            'Junior': { width: 2.5, height: 4.0 },
+            'Specialiste': { width: 2.8, height: 3.5 },
+            'Referent': { width: 3.0, height: 3.2 },
+            'Expert': { width: 3.2, height: 3.0 }
+        };
+
+        const size = collisionSizes[this.character.name] || { width: 3, height: 3 };
+        
+        const rx = player.size * size.width / 2;
+        const ry = player.size * size.height / 2;
+        const dx = player.x - ball.x;
+        const dy = player.y - ball.y;
+
+        return ((dx * dx) / (rx * rx) + (dy * dy) / (ry * ry)) <= Math.pow(1 + ball.size / Math.max(rx, ry), 2);
     }
     update() {
         if (!this.isRunning && !this.hasStarted) return;
