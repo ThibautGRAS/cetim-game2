@@ -8,7 +8,6 @@ class Level {
         this.overhead = 0;
         this.isRunning = false;
         this.isComplete = false;
-        this.timeLeft = 5;
         this.hasStarted = false;
         this.rulesPanel = null;
         this.hud = null;
@@ -20,7 +19,6 @@ class Level {
         this.isComplete = false;
         this.projectHours = 0;
         this.overhead = 0;
-        this.timeLeft = 5;
         this.hasStarted = false;
         this.lastUpdateTime = Date.now();
         this.removeHUD();
@@ -204,13 +202,19 @@ class Level1 extends Level {
         console.log('Loading mask...');
         this.maskImg = new window.Image();
         this.maskImg.src = 'images/L1/decor_masque.png';
-        
+
         this.maskImg.onload = () => {
             console.log('Mask image loaded');
             this.maskCanvas = document.createElement('canvas');
             this.maskCanvas.width = this.maskImg.width;
             this.maskCanvas.height = this.maskImg.height;
             this.maskCtx = this.maskCanvas.getContext('2d');  // Créer le contexte avant de l'utiliser
+
+            // Correction : vérifier que maskCtx n'est pas null avant d'utiliser drawImage
+            if (!this.maskCtx) {
+                console.error('Erreur : maskCtx est null lors du chargement du masque');
+                return;
+            }
             this.maskCtx.drawImage(this.maskImg, 0, 0);
 
             // Analyser le masque pour trouver les zones blanches
@@ -218,7 +222,7 @@ class Level1 extends Level {
             console.log(`Found ${this.safeZones.length} safe zones`);
 
             this.maskLoaded = true;
-            if (this.isRunning) {
+            if (this.isRunning && this.goldenBalls.length === 0) {
                 this.spawnGoldenBalls();
             }
         };
@@ -278,7 +282,14 @@ class Level1 extends Level {
         this.goldenBalls = [];
         this.projectHours = 0;
         this.overhead = 0;
-        this.timeLeft = window.levelLimits?.level1?.time ?? 20; // Limite configurable
+        // Ajoute un log pour vérifier la présence de window.levelLimits
+        console.log("window.levelLimits =", window.levelLimits);
+        console.log("window.levelLimits.level1 =", window.levelLimits?.level1);
+        console.log("window.levelLimits.level1.time =", window.levelLimits?.level1?.time);
+        this.timeLeft = (window.levelLimits && window.levelLimits.level1 && Number.isFinite(window.levelLimits.level1.time))
+            ? window.levelLimits.level1.time
+            : 20;
+        console.log("Level1 timeLeft utilisé =", this.timeLeft);
         this.hasStarted = false;
         this.isRunning = true;
         this.isComplete = false;
@@ -817,7 +828,6 @@ class Level2 extends Level {
         this.reviewsCollected = 0;
         this.projectHours = 0;
         this.overhead = 0;
-        this.timeLeft = 5;
         this.hasStarted = false;
         this.isRunning = true;
         this.isComplete = false;
@@ -987,7 +997,9 @@ class Level2 extends Level {
             if (Math.random() < this.character.maladresse * 0.1 * deltaTime * 60) {
                 this.overhead += 0.025;
             }
-            const overheadLimit = window.levelLimits?.level2?.overhead ?? 20;
+            const overheadLimit = (window.levelLimits && window.levelLimits.level2 && typeof window.levelLimits.level2.overhead === 'number')
+                ? window.levelLimits.level2.overhead
+                : 20;
             if (this.overhead >= overheadLimit) {
                 this.overhead = overheadLimit;
                 this.isComplete = true;
