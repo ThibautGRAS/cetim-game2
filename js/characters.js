@@ -8,19 +8,19 @@ window.characters = {
     },
     Specialiste: {
         vitesse: 0.7,
-        frais: 0.4,
+        frais: 0.3,
         efficacite: 0.6,
         maladresse: 0.4
     },
     Referent: {
         vitesse: 0.6,
-        frais: 0.6,
+        frais: 0.4,
         efficacite: 0.7,
         maladresse: 0.5
     },
     Expert: {
-        vitesse: 0.5,
-        frais: 0.6,
+        vitesse: 0.55,
+        frais: 0.5,
         efficacite: 0.95,
         maladresse: 0.1
     }

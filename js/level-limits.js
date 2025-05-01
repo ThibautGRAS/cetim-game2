@@ -3,6 +3,6 @@ window.levelLimits = {
         time: 20 // secondes
     },
     level2: {
-        overhead: 20 // heures
+        overhead: 37.5 // heures
     }
 };

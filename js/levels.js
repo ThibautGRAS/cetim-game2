@@ -40,7 +40,7 @@ class Level {
         this.rulesPanel = document.createElement('div');
         this.rulesPanel.className = 'rules-panel';
         this.rulesPanel.innerHTML = `
-            <h2>Règles du niveau</h2>
+            <h2>MISSIONS REPORTING</h2>
             <div class="rules-content">
                 ${this.getRulesContent()}
             </div>
@@ -84,7 +84,7 @@ class Level {
     }
 
     getRulesContent() {
-        return "Ramassez les boules dorées pour accumuler des heures projet. Attention aux frais généraux !";
+        return " NIVEAU 1 : Ramassez les boules dorées pour accumuler des heures projet. Attention aux frais généraux !";
     }
 
     showHUD() {
@@ -165,6 +165,9 @@ class Level1 extends Level {
         this.maskReady = false;
         this.decorW = null;
         this.decorH = null;
+        this.maskLoaded = false;
+        this.safeZones = []; // Pour stocker les zones autorisées
+        this.loadMask(); // Charger le masque dès le début
         console.log('Level1 initialized with speed:', this.baseSpeed, 'for character:', this.character.name, 'vitesse:', this.character.vitesse, 'baseSpeed:', this.baseSpeed);
     }
 
@@ -197,6 +200,76 @@ class Level1 extends Level {
         img2.src = `images/${folder}/f2.png`;
     }
 
+    loadMask() {
+        console.log('Loading mask...');
+        this.maskImg = new window.Image();
+        this.maskImg.src = 'images/L1/decor_masque.png';
+        
+        this.maskImg.onload = () => {
+            console.log('Mask image loaded');
+            this.maskCanvas = document.createElement('canvas');
+            this.maskCanvas.width = this.maskImg.width;
+            this.maskCanvas.height = this.maskImg.height;
+            this.maskCtx = this.maskCanvas.getContext('2d');  // Créer le contexte avant de l'utiliser
+            this.maskCtx.drawImage(this.maskImg, 0, 0);
+
+            // Analyser le masque pour trouver les zones blanches
+            this.analyzeMask();
+            console.log(`Found ${this.safeZones.length} safe zones`);
+
+            this.maskLoaded = true;
+            if (this.isRunning) {
+                this.spawnGoldenBalls();
+            }
+        };
+    }
+
+    analyzeMask() {
+        const gridSize = 20; // Taille de la grille d'analyse
+        const data = this.maskCtx.getImageData(0, 0, this.maskCanvas.width, this.maskCanvas.height);
+        const margin = 18;
+
+        // Parcourir le masque par zones
+        for (let x = margin; x < this.maskCanvas.width - margin; x += gridSize) {
+            for (let y = margin; y < this.maskCanvas.height - margin; y += gridSize) {
+                let whitePixelsCount = 0;
+
+                // Vérifier chaque pixel de la zone
+                for (let dx = 0; dx < gridSize; dx++) {
+                    for (let dy = 0; dy < gridSize; dy++) {
+                        if (x + dx < data.width && y + dy < data.height) {
+                            const idx = ((y + dy) * data.width + (x + dx)) * 4;
+                            // Vérifier si le pixel est blanc
+                            if (data.data[idx] > 200 && data.data[idx + 1] > 200 && data.data[idx + 2] > 200) {
+                                whitePixelsCount++;
+                            }
+                        }
+                    }
+                }
+
+                // Si la zone est majoritairement blanche, l'ajouter aux zones sûres
+                if (whitePixelsCount > (gridSize * gridSize * 0.8)) {
+                    this.safeZones.push({
+                        x: x + gridSize / 2,
+                        y: y + gridSize / 2
+                    });
+                }
+            }
+        }
+    }
+
+    canMoveTo(x, y) {
+        // Empêche le déplacement dans les zones noires du masque
+        if (!this.maskReady || !this.maskCtx || !this.decorW || !this.decorH) return true;
+        const maskW = this.maskImg.naturalWidth;
+        const maskH = this.maskImg.naturalHeight;
+        const mx = Math.round(x * maskW / this.decorW);
+        const my = Math.round(y * maskH / this.decorH);
+        if (mx < 0 || my < 0 || mx >= maskW || my >= maskH) return false;
+        const pixel = this.maskCtx.getImageData(mx, my, 1, 1).data;
+        return pixel[0] > 200 && pixel[1] > 200 && pixel[2] > 200;
+    }
+
     start() {
         if (!this.canvas) {
             throw new Error('Canvas not initialized in Level1');
@@ -219,7 +292,13 @@ class Level1 extends Level {
         this.game.player.x = this.canvas.width / 2;
         this.game.player.y = this.canvas.height / 2;
         
-        this.spawnGoldenBalls();
+        // Ne pas recharger le masque si déjà chargé
+        if (!this.maskLoaded) {
+            this.loadMask();
+        } else {
+            // Si le masque est déjà chargé, générer directement les boules
+            this.spawnGoldenBalls();
+        }
 
         // --- Ajout du fond sonore ---
         if (!this.bgAudio) {
@@ -255,7 +334,6 @@ class Level1 extends Level {
             this.maskCanvas = document.createElement('canvas');
             this.maskCanvas.width = this.maskImg.naturalWidth;
             this.maskCanvas.height = this.maskImg.naturalHeight;
-            this.maskCtx = this.maskCanvas.getContext('2d');
             this.maskCtx.drawImage(this.maskImg, 0, 0);
             this.maskReady = true;
             if (this.decorW && this.decorH) this.ensurePlayerInWhiteZone();
@@ -272,38 +350,34 @@ class Level1 extends Level {
     }
 
     spawnGoldenBalls() {
-        // Place les boules uniquement dans la zone du décor (image)
-        const decorImg = new window.Image();
-        decorImg.src = 'images/L1/decor.PNG';
-        let decorW = this.canvas.width;
-        let decorH = this.canvas.height;
-        if (decorImg.naturalWidth && decorImg.naturalHeight) {
-            decorW = decorImg.naturalWidth;
-            decorH = decorImg.naturalHeight;
+        if (!this.maskLoaded || !this.safeZones.length) {
+            console.log('Cannot spawn balls: mask not loaded or no safe zones found');
+            return;
         }
-        const gridX = 6, gridY = 5; // Plus de cellules
-        const cellWidth = decorW / gridX;
-        const cellHeight = decorH / gridY;
 
+        console.log('Spawning golden balls...');
         this.goldenBalls = [];
-        for (let i = 0; i < gridX; i++) {
-            for (let j = 0; j < gridY; j++) {
-                const ballsInCell = Math.floor(Math.random() * 2) + 1; // 1 à 2 boules par cellule
-                for (let k = 0; k < ballsInCell; k++) {
-                    // Toujours dans la zone du décor, jamais sur le bord droit
-                    const margin = 18;
-                    const x = Math.max(margin, Math.min(decorW - margin, (i * cellWidth) + (Math.random() * (cellWidth - 2 * margin)) + margin));
-                    const y = Math.max(margin, Math.min(decorH - margin, (j * cellHeight) + (Math.random() * (cellHeight - 2 * margin)) + margin));
-                    if (this.isWhiteOnMask(x, y)) {
-                        this.goldenBalls.push({
-                            x,
-                            y,
-                            size: 15
-                        });
-                    }
-                }
-            }
-        }
+        const ballSize = 15;
+        const ballsCount = Math.min(40, this.safeZones.length); // Augmente le nombre de boules
+
+        // Mélanger les zones sûres
+        const shuffledZones = [...this.safeZones]
+            .sort(() => Math.random() - 0.5)
+            .slice(0, ballsCount);
+
+        shuffledZones.forEach(zone => {
+            const offset = 10;
+            const x = zone.x + (Math.random() * offset * 2 - offset);
+            const y = zone.y + (Math.random() * offset * 2 - offset);
+            this.goldenBalls.push({
+                x,
+                y,
+                size: ballSize,
+                phase: Math.random() * Math.PI * 2 // Pour décaler l'effet de chaque boule
+            });
+        });
+
+        console.log(`Generated ${this.goldenBalls.length} golden balls`);
     }
 
     isWhiteOnMask(x, y) {
@@ -410,9 +484,16 @@ class Level1 extends Level {
                 maxY = decorImg.naturalHeight - playerSize / 2;
             }
 
-            // Simplement appliquer les limites sans vérifier le masque
-            this.game.player.x = Math.max(minX, Math.min(this.game.player.x + dx, maxX));
-            this.game.player.y = Math.max(minY, Math.min(this.game.player.y + dy, maxY));
+            // Nouvelle position candidate
+            let newX = Math.max(minX, Math.min(this.game.player.x + dx, maxX));
+            let newY = Math.max(minY, Math.min(this.game.player.y + dy, maxY));
+
+            // Collision masque : n'autorise le déplacement que si la nouvelle position est blanche
+            if (this.canMoveTo(newX, newY)) {
+                this.game.player.x = newX;
+                this.game.player.y = newY;
+            }
+            // Sinon, on bloque le déplacement (le joueur reste sur place)
         }
 
         this.checkPlayerAnimImages();
@@ -461,23 +542,26 @@ class Level1 extends Level {
     }
 
     handleLevelComplete() {
-        console.log('Level 1 completed!');
-        console.log('Project Hours:', this.projectHours);
-        console.log('Overhead:', this.overhead);
-        
         const totalHours = this.projectHours + this.overhead;
         const overheadPercentage = totalHours > 0 ? (this.overhead / totalHours) * 100 : 0;
         let message = '';
-        if (overheadPercentage >= 100) {
-            message = `<div style="color:#ffcc00;font-weight:bold;margin:1em 0;">⚠️ Rapport RH : Les frais généraux dépassent 100% !<br>Merci de consulter votre manager pour une formation accélérée sur la gestion du temps.<br>Impossible de passer au niveau suivant tant que la paperasse prend toute la place !</div>`;
-        } else if (overheadPercentage > 60) {
-            message = `<div style="color:#ffcc00;font-weight:bold;margin:1em 0;">⚠️ Note du service financier : Les frais généraux sont très élevés.<br>On va devoir organiser un séminaire PowerPoint sur l'optimisation des coûts !</div>`;
-        } else if (this.projectHours < 10) {
-            message = `<div style="color:#ffcc00;font-weight:bold;margin:1em 0;">⚠️ Bilan : Peu d'heures projet collectées.<br>On va finir par vous confier la gestion de la machine à café...</div>`;
+        let canGoNext = false;
+        let color = '#00ff99';
+
+        if (overheadPercentage < 10) {
+            message = `<div style="color:#00ff99;font-weight:bold;margin:1em 0;">🎉 Félicitations ! Votre chef est RAVI : frais généraux maîtrisés (<b>${overheadPercentage.toFixed(1)}%</b>) !<br>Vous passez au niveau suivant !</div>`;
+            canGoNext = true;
+            color = '#00ff99';
+        } else if (overheadPercentage < 20) {
+            message = `<div style="color:#ffcc00;font-weight:bold;margin:1em 0;">⚠️ Votre chef vous alerte : frais généraux un peu élevés (<b>${overheadPercentage.toFixed(1)}%</b>).<br>Vous pouvez passer au niveau suivant, mais attention à la suite !</div>`;
+            canGoNext = true;
+            color = '#ffcc00';
         } else {
-            message = `<div style="color:#00ff99;font-weight:bold;margin:1em 0;">👍 Excellent travail ! Les actionnaires sont ravis, le service RH aussi (pour une fois).</div>`;
+            message = `<div style="color:#ff4444;font-weight:bold;margin:1em 0;">❌ Les frais généraux sont trop élevés (<b>${overheadPercentage.toFixed(1)}%</b>) !<br>Votre chef refuse la validation, impossible d'aller plus loin.</div>`;
+            canGoNext = false;
+            color = '#ff4444';
         }
-        
+
         const scoreScreen = document.createElement('div');
         scoreScreen.className = 'score-screen';
         scoreScreen.innerHTML = `
@@ -485,7 +569,7 @@ class Level1 extends Level {
             <div class="score-details">
                 <p><b>Heures Projet réalisées :</b> ${this.projectHours.toFixed(1)}h</p>
                 <p><b>Frais Généraux :</b> ${this.overhead.toFixed(1)}h</p>
-                <p><b>Pourcentage Frais Généraux :</b> ${overheadPercentage.toFixed(1)}%</p>
+                <p><b>Pourcentage Frais Généraux :</b> <span style="color:${color};font-weight:bold;">${overheadPercentage.toFixed(1)}%</span></p>
             </div>
             ${message}
             <div class="score-buttons">
@@ -493,8 +577,7 @@ class Level1 extends Level {
                 <button id="main-menu">Retour au menu</button>
             </div>
         `;
-        
-        // Ajouter les styles si nécessaire
+
         if (!document.getElementById('score-screen-styles')) {
             const style = document.createElement('style');
             style.id = 'score-screen-styles';
@@ -549,24 +632,20 @@ class Level1 extends Level {
             `;
             document.head.appendChild(style);
         }
-        
-        // Supprimer l'ancien écran de score s'il existe
+
         const oldScoreScreen = document.querySelector('.score-screen');
         if (oldScoreScreen) {
             document.body.removeChild(oldScoreScreen);
         }
-        
-        // Ajouter le nouvel écran de score
-        document.body.appendChild(scoreScreen);
-        console.log('Score screen added to document');
 
-        // Gestion des boutons
+        document.body.appendChild(scoreScreen);
+
         document.getElementById('next-level').addEventListener('click', () => {
-            if (overheadPercentage < 100) {
+            if (canGoNext) {
                 document.body.removeChild(scoreScreen);
                 this.game.startLevel(2);
             } else {
-                alert('Les frais généraux doivent être inférieurs à 100% pour passer au niveau suivant.');
+                alert('Les frais généraux doivent être inférieurs à 20% pour passer au niveau suivant.');
             }
         });
 
@@ -610,12 +689,48 @@ class Level1 extends Level {
                 const offsetX = srcX;
                 const offsetY = srcY;
 
-                // Boules dorées
-                this.ctx.fillStyle = '#ffcc00';
+                // Boules dorées avec effet stylé (halo animé + cœur lumineux)
+                const now = performance.now() / 1000;
                 this.goldenBalls.forEach(ball => {
+                    // Animation de pulsation douce
+                    const pulse = 1 + 0.18 * Math.sin(now * 2 + ball.phase);
+
+                    // Halo animé
+                    const gradient = this.ctx.createRadialGradient(
+                        ball.x - offsetX, ball.y - offsetY, 0,
+                        ball.x - offsetX, ball.y - offsetY, ball.size * pulse
+                    );
+                    gradient.addColorStop(0, '#fffbe0');
+                    gradient.addColorStop(0.18, '#fffbe0');
+                    gradient.addColorStop(0.28, '#ffe066');
+                    gradient.addColorStop(0.5, '#ffcc00');
+                    gradient.addColorStop(0.8, 'rgba(255, 204, 0, 0.15)');
+                    gradient.addColorStop(1, 'rgba(255,255,255,0)');
+
+                    this.ctx.beginPath();
+                    this.ctx.arc(ball.x - offsetX, ball.y - offsetY, ball.size * pulse, 0, Math.PI * 2);
+                    this.ctx.fillStyle = gradient;
+                    this.ctx.globalAlpha = 0.85;
+                    this.ctx.fill();
+                    this.ctx.globalAlpha = 1;
+
+                    // Boule principale
                     this.ctx.beginPath();
                     this.ctx.arc(ball.x - offsetX, ball.y - offsetY, ball.size / 2, 0, Math.PI * 2);
+                    this.ctx.fillStyle = '#ffcc00';
+                    this.ctx.shadowColor = '#fffbe0';
+                    this.ctx.shadowBlur = 8;
                     this.ctx.fill();
+                    this.ctx.shadowBlur = 0;
+
+                    // Petit cœur lumineux au centre
+                    this.ctx.beginPath();
+                    this.ctx.arc(ball.x - offsetX, ball.y - offsetY, ball.size / 6, 0, Math.PI * 2);
+                    this.ctx.fillStyle = 'rgba(255,255,255,0.92)';
+                    this.ctx.shadowColor = '#fffbe0';
+                    this.ctx.shadowBlur = 12;
+                    this.ctx.fill();
+                    this.ctx.shadowBlur = 0;
                 });
 
                 this.checkPlayerAnimImages();
@@ -908,27 +1023,35 @@ class Level2 extends Level {
         return "Ramassez les boules vertes pour collecter des revues de projet ! Chaque revue compte pour 1 heure projet. Attention aux frais généraux : le niveau s'arrête à 7.5h !";
     }
     handleLevelComplete() {
-        const revues = this.reviewsCollected;
-        const heures = this.projectHours.toFixed(1);
-        const frais = this.overhead.toFixed(1);
-        const percent = this.projectHours > 0 ? (this.overhead / this.projectHours) * 100 : 0;
+        const totalHours = this.projectHours + this.overhead;
+        const overheadPercentage = totalHours > 0 ? (this.overhead / totalHours) * 100 : 0;
         let message = '';
-        if (percent > 60) {
-            message = `<div style="color:#ffcc00;font-weight:bold;margin:1em 0;">⚠️ Alerte du contrôle de gestion : Les frais généraux dépassent 60% !<br>Votre manager vous propose un atelier "Excel avancé" pour mieux suivre vos coûts.<br>On ne peut pas valider ce reporting pour la direction...</div>`;
-        } else if (revues < 10) {
-            message = `<div style="color:#ffcc00;font-weight:bold;margin:1em 0;">⚠️ Peu de revues de projet collectées.<br>On va finir par vous confier la gestion du stock de stylos...</div>`;
+        let canGoNext = false;
+        let color = '#00ff99';
+
+        if (overheadPercentage < 10) {
+            message = `<div style="color:#00ff99;font-weight:bold;margin:1em 0;">🎉 Félicitations ! Votre chef est RAVI : frais généraux maîtrisés (<b>${overheadPercentage.toFixed(1)}%</b>) !<br>Vous passez au niveau suivant !</div>`;
+            canGoNext = true;
+            color = '#00ff99';
+        } else if (overheadPercentage < 20) {
+            message = `<div style="color:#ffcc00;font-weight:bold;margin:1em 0;">⚠️ Votre chef vous alerte : frais généraux un peu élevés (<b>${overheadPercentage.toFixed(1)}%</b>).<br>Vous pouvez passer au niveau suivant, mais attention à la suite !</div>`;
+            canGoNext = true;
+            color = '#ffcc00';
         } else {
-            message = `<div style="color:#00ff99;font-weight:bold;margin:1em 0;">👍 Bravo ! Les indicateurs sont au vert, le service Qualité vous félicite (et c'est rare) !</div>`;
+            message = `<div style="color:#ff4444;font-weight:bold;margin:1em 0;">❌ Les frais généraux sont trop élevés (<b>${overheadPercentage.toFixed(1)}%</b>) !<br>Votre chef refuse la validation, impossible d'aller plus loin.</div>`;
+            canGoNext = false;
+            color = '#ff4444';
         }
+
         const scoreScreen = document.createElement('div');
         scoreScreen.className = 'score-screen';
         scoreScreen.innerHTML = `
             <h2>Reporting Niveau 2</h2>
             <div class="score-details">
-                <p><b>Revues de projet :</b> ${revues}</p>
-                <p><b>Heures projet gagnées :</b> ${heures}</p>
-                <p><b>Frais généraux :</b> ${frais}h</p>
-                <p><b>% Frais généraux / heures projet :</b> ${percent.toFixed(1)}%</p>
+                <p><b>Revues de projet :</b> ${this.reviewsCollected}</p>
+                <p><b>Heures projet gagnées :</b> ${this.projectHours.toFixed(1)}</p>
+                <p><b>Frais généraux :</b> ${this.overhead.toFixed(1)}h</p>
+                <p><b>% Frais généraux / total :</b> <span style="color:${color};font-weight:bold;">${overheadPercentage.toFixed(1)}%</span></p>
             </div>
             ${message}
             <div class="score-buttons">
@@ -936,6 +1059,7 @@ class Level2 extends Level {
                 <button id="main-menu">Retour au menu</button>
             </div>
         `;
+
         if (!document.getElementById('score-screen-styles')) {
             const style = document.createElement('style');
             style.id = 'score-screen-styles';
@@ -990,17 +1114,19 @@ class Level2 extends Level {
             `;
             document.head.appendChild(style);
         }
+
         const oldScoreScreen = document.querySelector('.score-screen');
         if (oldScoreScreen) {
             document.body.removeChild(oldScoreScreen);
         }
         document.body.appendChild(scoreScreen);
+
         document.getElementById('next-level').addEventListener('click', () => {
-            if (percent <= 60) {
+            if (canGoNext) {
                 document.body.removeChild(scoreScreen);
                 this.game.startLevel(3);
             } else {
-                alert('Les frais généraux doivent être inférieurs à 60% pour passer au niveau suivant.');
+                alert('Les frais généraux doivent être inférieurs à 20% pour passer au niveau suivant.');
             }
         });
         document.getElementById('main-menu').addEventListener('click', () => {
@@ -1090,5 +1216,107 @@ class Level3 extends Level {
     stop() {
         super.stop();
         console.log('Level3 stopped');
+    }
+    handleLevelComplete() {
+        const totalHours = this.projectHours + this.overhead;
+        const overheadPercentage = totalHours > 0 ? (this.overhead / totalHours) * 100 : 0;
+        let message = '';
+        let canGoNext = false;
+        let color = '#00ff99';
+
+        if (overheadPercentage < 10) {
+            message = `<div style="color:#00ff99;font-weight:bold;margin:1em 0;">🎉 Félicitations ! Votre chef est RAVI : frais généraux maîtrisés (<b>${overheadPercentage.toFixed(1)}%</b>) !<br>Bravo, vous avez terminé le jeu !</div>`;
+            canGoNext = true;
+            color = '#00ff99';
+        } else if (overheadPercentage < 20) {
+            message = `<div style="color:#ffcc00;font-weight:bold;margin:1em 0;">⚠️ Votre chef vous alerte : frais généraux un peu élevés (<b>${overheadPercentage.toFixed(1)}%</b>).<br>Vous avez terminé le jeu, mais attention à la gestion !</div>`;
+            canGoNext = true;
+            color = '#ffcc00';
+        } else {
+            message = `<div style="color:#ff4444;font-weight:bold;margin:1em 0;">❌ Les frais généraux sont trop élevés (<b>${overheadPercentage.toFixed(1)}%</b>) !<br>Votre chef refuse la validation, impossible de valider la fin du jeu.</div>`;
+            canGoNext = false;
+            color = '#ff4444';
+        }
+
+        const scoreScreen = document.createElement('div');
+        scoreScreen.className = 'score-screen';
+        scoreScreen.innerHTML = `
+            <h2>Reporting Niveau 3</h2>
+            <div class="score-details">
+                <p><b>Heures Projet réalisées :</b> ${this.projectHours?.toFixed(1) ?? 0}h</p>
+                <p><b>Frais Généraux :</b> ${this.overhead?.toFixed(1) ?? 0}h</p>
+                <p><b>Pourcentage Frais Généraux :</b> <span style="color:${color};font-weight:bold;">${overheadPercentage.toFixed(1)}%</span></p>
+            </div>
+            ${message}
+            <div class="score-buttons">
+                <button id="main-menu">Retour au menu</button>
+            </div>
+        `;
+
+        if (!document.getElementById('score-screen-styles')) {
+            const style = document.createElement('style');
+            style.id = 'score-screen-styles';
+            style.textContent = `
+                .score-screen {
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: rgba(0, 32, 96, 0.95);
+                    padding: 30px;
+                    border-radius: 10px;
+                    border: 2px solid #c8102e;
+                    text-align: center;
+                    z-index: 100;
+                    color: white;
+                    box-shadow: 0 0 20px rgba(200, 16, 46, 0.3);
+                    font-family: 'Arial', sans-serif;
+                }
+                .score-details {
+                    margin: 20px 0;
+                    font-size: 1.2em;
+                    background: rgba(255,255,255,0.07);
+                    border-radius: 8px;
+                    padding: 1em;
+                }
+                .score-details p {
+                    margin: 10px 0;
+                }
+                .score-buttons {
+                    display: flex;
+                    justify-content: center;
+                    gap: 20px;
+                    margin-top: 30px;
+                }
+                .score-buttons button {
+                    padding: 12px 24px;
+                    border: none;
+                    border-radius: 5px;
+                    background: #c8102e;
+                    color: white;
+                    font-weight: bold;
+                    cursor: pointer;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                    transition: all 0.3s ease;
+                }
+                .score-buttons button:hover {
+                    transform: scale(1.1);
+                    box-shadow: 0 0 15px rgba(200, 16, 46, 0.5);
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        const oldScoreScreen = document.querySelector('.score-screen');
+        if (oldScoreScreen) {
+            document.body.removeChild(oldScoreScreen);
+        }
+        document.body.appendChild(scoreScreen);
+
+        document.getElementById('main-menu').addEventListener('click', () => {
+            document.body.removeChild(scoreScreen);
+            this.game.restartGame();
+        });
     }
 }
