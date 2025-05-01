@@ -28,16 +28,25 @@ window.characters = {
 
 let selectedCharacter = null;
 
+// Classe Character
+class Character {
+    constructor(name, vitesse) {
+        this.name = name;
+        this.vitesse = vitesse;
+    }
+}
+
 // Fonction pour sélectionner un personnage
 window.selectCharacter = function(characterName) {
     console.log('Selecting character:', characterName);
     console.log('Available characters:', Object.keys(window.characters));
     
     if (window.characters[characterName]) {
-        selectedCharacter = {
-            name: characterName,
-            ...window.characters[characterName]
-        };
+        const data = window.characters[characterName];
+        selectedCharacter = new Character(characterName, data.vitesse);
+        selectedCharacter.frais = data.frais;
+        selectedCharacter.efficacite = data.efficacite;
+        selectedCharacter.maladresse = data.maladresse;
         console.log('Character selected:', selectedCharacter);
         return selectedCharacter;
     } else {

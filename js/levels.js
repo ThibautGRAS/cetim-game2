@@ -358,7 +358,7 @@ class Level1 extends Level {
         console.log('Spawning golden balls...');
         this.goldenBalls = [];
         const ballSize = 15;
-        const ballsCount = Math.min(40, this.safeZones.length); // Augmente le nombre de boules
+        const ballsCount = Math.min(50, this.safeZones.length); // Augmente le nombre de boules
 
         // Mélanger les zones sûres
         const shuffledZones = [...this.safeZones]
@@ -822,7 +822,9 @@ class Level2 extends Level {
         this.isRunning = true;
         this.isComplete = false;
         this.lastUpdateTime = Date.now();
+        // Toujours recalculer la vitesse à partir des stats du personnage
         this.playerSpeed = this.baseSpeed * this.character.vitesse;
+        console.log('Level2 started with speed:', this.playerSpeed, 'for character:', this.character.name, 'vitesse:', this.character.vitesse, 'baseSpeed:', this.baseSpeed);
         this.game.player.x = this.canvas.width / 2;
         this.game.player.y = this.canvas.height / 2;
         this.spawnGreenBalls();
@@ -966,9 +968,9 @@ class Level2 extends Level {
         // Collision avec les boules vertes + son
         this.greenBalls = this.greenBalls.filter(ball => {
             if (this.checkCollision(this.game.player, ball)) {
-                // 1 revue de projet, heures projet selon efficacité
+                // 1 revue de projet, heures projet selon efficacité (NOUVEAU: 8*efficacité)
                 this.reviewsCollected += 1;
-                this.projectHours += 3 * this.character.efficacite;
+                this.projectHours += 8 * this.character.efficacite;
                 // Joue le son de boule verte
                 try {
                     const audio = new Audio('images/L2/ball.wav');
@@ -1159,13 +1161,56 @@ class Level2 extends Level {
                 this.ctx.drawImage(bg, srcX, srcY, viewW, viewH, 0, 0, canvasW, canvasH);
                 const offsetX = srcX;
                 const offsetY = srcY;
-                // Boules vertes
-                this.ctx.fillStyle = "#00cc44";
-                this.greenBalls.forEach(ball => {
+
+                // Boules vertes avec effet stylé (halo animé + cœur lumineux)
+                const now = performance.now() / 1000;
+                this.greenBalls.forEach((ball, i) => {
+                    // Ajoute une phase pour chaque boule pour décaler l'effet
+                    if (!ball.phase) ball.phase = Math.random() * Math.PI * 2;
+                    const pulse = 1 + 0.18 * Math.sin(now * 2 + ball.phase);
+
+                    // Halo animé vert
+                    const cx = (ball.x - offsetX) * zoom;
+                    const cy = (ball.y - offsetY) * zoom;
+                    const r = ball.size * pulse * zoom;
+
+                    const gradient = this.ctx.createRadialGradient(
+                        cx, cy, 0,
+                        cx, cy, r
+                    );
+                    gradient.addColorStop(0, '#eaffea');
+                    gradient.addColorStop(0.18, '#eaffea');
+                    gradient.addColorStop(0.28, '#aaffaa');
+                    gradient.addColorStop(0.5, '#00cc44');
+                    gradient.addColorStop(0.8, 'rgba(0, 204, 68, 0.13)');
+                    gradient.addColorStop(1, 'rgba(255,255,255,0)');
+
                     this.ctx.beginPath();
-                    this.ctx.arc((ball.x - offsetX) * zoom, (ball.y - offsetY) * zoom, ball.size / 2 * zoom, 0, Math.PI * 2);
+                    this.ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                    this.ctx.fillStyle = gradient;
+                    this.ctx.globalAlpha = 0.85;
                     this.ctx.fill();
+                    this.ctx.globalAlpha = 1;
+
+                    // Boule principale
+                    this.ctx.beginPath();
+                    this.ctx.arc(cx, cy, ball.size / 2 * zoom, 0, Math.PI * 2);
+                    this.ctx.fillStyle = '#00cc44';
+                    this.ctx.shadowColor = '#eaffea';
+                    this.ctx.shadowBlur = 8 * zoom;
+                    this.ctx.fill();
+                    this.ctx.shadowBlur = 0;
+
+                    // Petit cœur lumineux au centre
+                    this.ctx.beginPath();
+                    this.ctx.arc(cx, cy, ball.size / 6 * zoom, 0, Math.PI * 2);
+                    this.ctx.fillStyle = 'rgba(255,255,255,0.92)';
+                    this.ctx.shadowColor = '#eaffea';
+                    this.ctx.shadowBlur = 12 * zoom;
+                    this.ctx.fill();
+                    this.ctx.shadowBlur = 0;
                 });
+
                 // Joueur (skin animé ou sphère)
                 this.checkPlayerAnimImages();
                 if (this.playerHasAnim) {

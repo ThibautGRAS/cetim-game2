@@ -101,7 +101,7 @@ class Game {
             this.currentLevel = null;
         }
 
-        // Réinitialiser la position du joueur
+        // Réinitialiser la position et la vitesse du joueur
         this.player = {
             x: this.canvas.width / 2,
             y: this.canvas.height / 2,
@@ -173,9 +173,9 @@ class Game {
             this.currentLevel.stop();
         }
         
-        // Mettre à jour la vitesse du joueur en fonction du redémarrage
-        let speedMultiplier = this.isRestartingLevel ? 10 : 1;
-        this.player.speed = this.character.vitesse * this.player.baseSpeed * speedMultiplier;
+        // Mettre à jour la vitesse du joueur
+        this.player.baseSpeed = 5;
+        this.player.speed = this.character ? this.player.baseSpeed * this.character.vitesse : 5;
         
         // Créer et démarrer le nouveau niveau
         switch(levelNumber) {
