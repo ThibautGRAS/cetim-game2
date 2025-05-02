@@ -130,7 +130,7 @@ class Level {
     draw() {
         // Décor sans zoom pour L1
         const bg = new Image();
-        bg.src = 'images/L1/decor.PNG';
+        bg.src = 'images/L1/decor.png';
 
         const player = this.game.player;
         const canvasW = this.canvas.width;
@@ -527,7 +527,7 @@ class Level1 extends Level {
 
             // Limites du décor (image)
             const decorImg = new window.Image();
-            decorImg.src = 'images/L1/decor.PNG';
+            decorImg.src = 'images/L1/decor.png';
             const playerSize = this.game.player.size;
 
             let minX = playerSize / 2;
@@ -713,7 +713,7 @@ class Level1 extends Level {
     draw() {
         // Décor sans zoom pour L1
         const bg = new Image();
-        bg.src = 'images/L1/decor.PNG';
+        bg.src = 'images/L1/decor.png';
 
         const player = this.game.player;
         const canvasW = this.canvas.width;
