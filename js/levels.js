@@ -329,7 +329,7 @@ class Level1 extends Level {
 
         // Charge le décor pour avoir la taille réelle
         this.decorImg = new window.Image();
-        this.decorImg.src = 'images/L1/decor.PNG';
+        this.decorImg.src = 'images/L1/decor.png';
         this.decorW = null;
         this.decorH = null;
 
