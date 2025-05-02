@@ -128,7 +128,51 @@ class Level {
     }
 
     draw() {
-        // ... (reprends ici tout le code de draw de ta version précédente)
+        // Décor sans zoom pour L1
+        const bg = new Image();
+        bg.src = 'images/L1/decor.PNG';
+
+        const player = this.game.player;
+        const canvasW = this.canvas.width;
+        const canvasH = this.canvas.height;
+
+        // Pour L1, PAS de zoom (zoom = 1)
+        const zoom = 1;
+
+        const drawScene = () => {
+            try {
+                const imgW = bg.width;
+                const imgH = bg.height;
+
+                // Centre de la caméra (centré sur le joueur)
+                let camX = player.x;
+                let camY = player.y;
+
+                // Taille de la vue (canvas en coordonnées décor)
+                const viewW = canvasW / zoom;
+                const viewH = canvasH / zoom;
+
+                camX = Math.max(viewW / 2, Math.min(imgW - viewW / 2, camX));
+                camY = Math.max(viewH / 2, Math.min(imgH - viewH / 2, camY));
+
+                const srcX = camX - viewW / 2;
+                const srcY = camY - viewH / 2;
+
+                this.ctx.clearRect(0, 0, canvasW, canvasH);
+                this.ctx.drawImage(bg, srcX, srcY, viewW, viewH, 0, 0, canvasW, canvasH);
+
+                const offsetX = srcX;
+                const offsetY = srcY;
+
+                // ...existing code for drawing balls and player...
+            } catch (e) {}
+        };
+
+        if (bg.complete && bg.naturalWidth) {
+            drawScene();
+        } else {
+            bg.onload = drawScene;
+        }
     }
 
     getSphereColor() {
@@ -329,7 +373,7 @@ class Level1 extends Level {
 
         // Charge le décor pour avoir la taille réelle
         this.decorImg = new window.Image();
-        this.decorImg.src = 'images/L1/decor.PNG';
+        this.decorImg.src = 'images/L1/decor.png';
         this.decorW = null;
         this.decorH = null;
 
@@ -667,13 +711,16 @@ class Level1 extends Level {
     }
 
     draw() {
-        // Décor sans zoom
+        // Décor sans zoom pour L1
         const bg = new Image();
         bg.src = 'images/L1/decor.PNG';
 
         const player = this.game.player;
         const canvasW = this.canvas.width;
         const canvasH = this.canvas.height;
+
+        // Pour L1, PAS de zoom (zoom = 1)
+        const zoom = 1;
 
         const drawScene = () => {
             try {
@@ -685,8 +732,8 @@ class Level1 extends Level {
                 let camY = player.y;
 
                 // Taille de la vue (canvas en coordonnées décor)
-                const viewW = canvasW;
-                const viewH = canvasH;
+                const viewW = canvasW / zoom;
+                const viewH = canvasH / zoom;
 
                 camX = Math.max(viewW / 2, Math.min(imgW - viewW / 2, camX));
                 camY = Math.max(viewH / 2, Math.min(imgH - viewH / 2, camY));
