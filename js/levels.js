@@ -130,7 +130,7 @@ class Level {
     draw() {
         // Décor sans zoom pour L1
         const bg = new Image();
-        bg.src = 'images/L1/decor.PNG';
+        bg.src = 'images/L1/decor.png';
 
         const player = this.game.player;
         const canvasW = this.canvas.width;
