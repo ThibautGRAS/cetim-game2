@@ -3,7 +3,7 @@
 // Cela n'affecte pas le fonctionnement de level-limits.js ou du jeu.
 window.levelLimits = {
     level1: {
-        time: 20.0 // secondes
+        time: 17 // secondes
     },
     level2: {
         overhead: 37.5 // heures
