@@ -18,7 +18,8 @@ class Game {
             x: this.canvas.width / 2,
             y: this.canvas.height / 2,
             size: 20,
-            baseSpeed: 5
+            baseSpeed: 5 / 3, // Réduction de la base speed par 3
+            speed: this.character ? (5 / 3) * this.character.vitesse : 5 / 3
         };
         
         // Initialiser les variables du jeu
@@ -106,8 +107,8 @@ class Game {
             x: this.canvas.width / 2,
             y: this.canvas.height / 2,
             size: 20,
-            baseSpeed: 5,
-            speed: this.character ? 5 * this.character.vitesse : 5
+            baseSpeed: 5 / 3, // Réduction de la base speed par 3
+            speed: this.character ? (5 / 3) * this.character.vitesse : 5 / 3
         };
 
         // Supprimer le HUD s'il existe
@@ -174,8 +175,8 @@ class Game {
         }
         
         // Mettre à jour la vitesse du joueur
-        this.player.baseSpeed = 5;
-        this.player.speed = this.character ? this.player.baseSpeed * this.character.vitesse : 5;
+        this.player.baseSpeed = 5 / 3; // Réduction de la base speed par 3 dans startLevel
+        this.player.speed = this.character ? this.player.baseSpeed * this.character.vitesse : this.player.baseSpeed;
         
         // Créer et démarrer le nouveau niveau
         switch(levelNumber) {
