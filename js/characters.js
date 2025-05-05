@@ -1,7 +1,7 @@
 // Définition des personnages
 window.characters = {
     Junior: {
-        vitesse: 0.8,
+        vitesse: 0.1,
         frais: 0.2,
         efficacite: 0.5,
         maladresse: 0.6
