@@ -193,7 +193,7 @@ class Level1 extends Level {
         this.game = game;
         this.goldenBalls = [];
         this.hasStarted = false;
-        this.baseSpeed = 2; // Vitesse de base pour le niveau 1
+        this.baseSpeed = 5; // Vitesse de base pour le niveau 1
         this.playerFrame = 0; // 0 ou 1 pour l'animation
         this.playerFrameTimer = 0;
         this.playerFrameDuration = 120; // ms entre frames
@@ -831,7 +831,7 @@ class Level2 extends Level {
         this.game = game;
         this.greenBalls = [];
         this.hasStarted = false;
-        this.baseSpeed = 2;
+        this.baseSpeed = 5;
         this.playerFrame = 0;
         this.playerFrameTimer = 0;
         this.playerFrameDuration = 120;
