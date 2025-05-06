@@ -193,7 +193,7 @@ class Level1 extends Level {
         this.game = game;
         this.goldenBalls = [];
         this.hasStarted = false;
-        this.baseSpeed = 5; // Vitesse de base pour le niveau 1
+        this.baseSpeed = 2; // Vitesse de base pour le niveau 1
         this.playerFrame = 0; // 0 ou 1 pour l'animation
         this.playerFrameTimer = 0;
         this.playerFrameDuration = 120; // ms entre frames
@@ -340,7 +340,7 @@ class Level1 extends Level {
         this.lastUpdateTime = Date.now();
         
         // Toujours recalculer la vitesse à partir des stats du personnage
-        this.playerSpeed = this.baseSpeed * this.character.vitesse;
+        this.playerSpeed = this.game.player.baseSpeed * this.character.vitesse;
         console.log('Level1 started with speed:', this.playerSpeed, 'for character:', this.character.name, 'vitesse:', this.character.vitesse, 'baseSpeed:', this.baseSpeed);
         
         // Réinitialiser la position du joueur
@@ -831,7 +831,7 @@ class Level2 extends Level {
         this.game = game;
         this.greenBalls = [];
         this.hasStarted = false;
-        this.baseSpeed = 5;
+        this.baseSpeed = 2;
         this.playerFrame = 0;
         this.playerFrameTimer = 0;
         this.playerFrameDuration = 120;
@@ -880,7 +880,7 @@ class Level2 extends Level {
         this.isComplete = false;
         this.lastUpdateTime = Date.now();
         // Toujours recalculer la vitesse à partir des stats du personnage
-        this.playerSpeed = this.baseSpeed * this.character.vitesse;
+        this.playerSpeed = this.game.player.baseSpeed * this.character.vitesse;
         console.log('Level2 started with speed:', this.playerSpeed, 'for character:', this.character.name, 'vitesse:', this.character.vitesse, 'baseSpeed:', this.baseSpeed);
         this.game.player.x = this.canvas.width / 2;
         this.game.player.y = this.canvas.height / 2;
