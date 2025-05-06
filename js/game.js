@@ -18,8 +18,8 @@ class Game {
             x: this.canvas.width / 2,
             y: this.canvas.height / 2,
             size: 20,
-            baseSpeed: 1, // Réduction de la base speed par 3
-            speed: this.character ? (1) * this.character.vitesse : 1
+            baseSpeed: 5 / 3, // Réduction de la base speed par 3
+            speed: this.character ? (5 / 3) * this.character.vitesse : 5 / 3
         };
         
         // Initialiser les variables du jeu
